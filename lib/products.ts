@@ -40,6 +40,8 @@ export interface ProductQuery {
   maxPrice?: number;
   /** Only products with volume tiers or a wholesale price. */
   bulk?: boolean;
+  /** Restrict to a single vendor's catalog (by vendor slug). */
+  vendor?: string;
 }
 
 /** True when a product has any bulk/wholesale pricing configured. */
@@ -76,14 +78,27 @@ function toPlainProduct(doc: any): Product {
         .sort((a: any, b: any) => a.minQty - b.minQty)
     : [];
   const w = doc.wholesale;
+  const wholesaleTiers = Array.isArray(w?.tiers)
+    ? w.tiers
+        .map((t: any) => ({
+          minQty: Number(t.minQty),
+          maxQty: t.maxQty == null ? null : Number(t.maxQty),
+          unitPrice: Number(t.unitPrice),
+        }))
+        .filter(
+          (t: any) => Number.isFinite(t.minQty) && Number.isFinite(t.unitPrice)
+        )
+        .sort((a: any, b: any) => a.minQty - b.minQty)
+    : [];
   const wholesale =
     w && typeof w === "object"
       ? {
           enabled: Boolean(w.enabled),
           unitPrice: Number(w.unitPrice) || 0,
           moq: Number(w.moq) || 1,
+          tiers: wholesaleTiers,
         }
-      : { enabled: false, unitPrice: 0, moq: 1 };
+      : { enabled: false, unitPrice: 0, moq: 1, tiers: [] };
   return {
     slug: doc.slug,
     name: doc.name,
@@ -101,6 +116,8 @@ function toPlainProduct(doc: any): Product {
     priceTiers,
     wholesale,
     gstRate: typeof doc.gstRate === "number" ? doc.gstRate : 18,
+    vendorSlug: doc.vendorSlug ?? "",
+    vendorName: doc.vendorName ?? "",
   };
 }
 
@@ -124,9 +141,10 @@ function sortProducts(list: Product[], sort: SortKey = "featured"): Product[] {
 }
 
 /** Filter/sort the local in-memory catalog — used as the no-database fallback. */
-function querySeed({ category, search, sort, featured, minPrice, maxPrice, bulk }: ProductQuery): Product[] {
+function querySeed({ category, search, sort, featured, minPrice, maxPrice, bulk, vendor }: ProductQuery): Product[] {
   let list = memCatalog();
   if (category) list = list.filter((p) => p.category === category);
+  if (vendor) list = list.filter((p) => (p.vendorSlug ?? "") === vendor);
   if (featured) list = list.filter((p) => p.featured);
   if (bulk) list = list.filter(hasBulkPricing);
   if (typeof minPrice === "number") list = list.filter((p) => p.price >= minPrice);
@@ -150,6 +168,7 @@ export async function getProducts(query: ProductQuery = {}): Promise<Product[]> 
   await connectToDatabase();
   const filter: Record<string, unknown> = {};
   if (query.category) filter.category = query.category;
+  if (query.vendor) filter.vendorSlug = query.vendor;
   if (query.featured) filter.featured = true;
   if (query.bulk) {
     // Use $and so this coexists with the search $or below without clobbering it.
@@ -178,6 +197,12 @@ export async function getProductBySlug(slug: string): Promise<Product | null> {
   await connectToDatabase();
   const doc = await ProductModel.findOne({ slug }).lean();
   return doc ? toPlainProduct(doc) : null;
+}
+
+/** Every product belonging to a vendor (by slug), newest-relevant first. */
+export async function getProductsByVendor(vendorSlug: string): Promise<Product[]> {
+  if (!vendorSlug) return [];
+  return getProducts({ vendor: vendorSlug, sort: "featured" });
 }
 
 export async function getFeaturedProducts(limit = 8): Promise<Product[]> {

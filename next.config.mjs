@@ -9,6 +9,8 @@ const nextConfig = {
     remotePatterns: [
       { protocol: "https", hostname: "images.unsplash.com" },
       { protocol: "https", hostname: "picsum.photos" },
+      // Real product photos for the catalog (swap for your own image host).
+      { protocol: "https", hostname: "cdn.dummyjson.com" },
     ],
   },
   // Baseline security headers applied to every response.
@@ -24,7 +26,7 @@ const nextConfig = {
       : "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://checkout.razorpay.com";
     const csp = [
       "default-src 'self'",
-      "img-src 'self' data: https://images.unsplash.com https://picsum.photos",
+      "img-src 'self' data: https://images.unsplash.com https://picsum.photos https://cdn.dummyjson.com",
       scriptSrc,
       "style-src 'self' 'unsafe-inline'",
       "font-src 'self' data:",

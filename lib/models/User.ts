@@ -13,18 +13,9 @@ const UserSchema = new Schema(
     },
     passwordHash: { type: String, required: true },
     role: { type: String, enum: ["customer", "admin"], default: "customer" },
-    // Retail vs wholesale buyer. Orthogonal to `role` (admin).
-    accountType: { type: String, enum: ["retail", "wholesale"], default: "retail" },
-    // Lifecycle of the wholesale application.
-    wholesaleStatus: {
-      type: String,
-      enum: ["none", "pending", "approved", "rejected"],
-      default: "none",
-    },
-    // Business details captured on the wholesale application (no GST logic).
-    companyName: { type: String, default: "" },
-    gstin: { type: String, default: "" },
-    businessPhone: { type: String, default: "" },
+    // NOTE: B2B/wholesale is now a distinct WHOLESALER role modeled as its own
+    // entity (lib/models/WholesalerProfile.ts), owned by a user — not fields on
+    // the user account. See lib/wholesalers.ts.
   },
   { timestamps: true }
 );

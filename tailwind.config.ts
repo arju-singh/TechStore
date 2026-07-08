@@ -1,5 +1,11 @@
 import type { Config } from "tailwindcss";
 
+/**
+ * Minimal dark theme (reference: motionsites.ai). The custom token NAMES are
+ * kept so existing markup doesn't break, but their VALUES are remapped to a
+ * near-black, high-contrast palette — so `text-ink`, `bg-amz-bg`, borders, nav
+ * and links all flip to dark-minimal at once.
+ */
 export default {
   content: [
     "./app/**/*.{js,ts,jsx,tsx,mdx}",
@@ -8,77 +14,96 @@ export default {
   theme: {
     extend: {
       colors: {
-        // brand = Amazon link teal-blue (links, focus, secondary accents)
+        // Accent — a single vivid lime used sparingly (CTAs, active states).
         brand: {
-          50: "#e6f2f4",
-          100: "#cce6e9",
-          200: "#99cdd3",
-          300: "#66b3bd",
-          400: "#339aa7",
-          500: "#008296",
-          600: "#007185",
-          700: "#005f6b",
-          800: "#004a54",
-          900: "#00363d",
+          50: "#f2fbe7",
+          100: "#e4f7cf",
+          200: "#c9ef9f",
+          300: "#ade66f",
+          400: "#9ee65a",
+          500: "#84cc16",
+          600: "#a3e635",
+          700: "#65a30d",
+          800: "#4d7c0f",
+          900: "#365314",
         },
-        // Amazon system colors
+        // Structural tokens remapped to a dark surface system.
         amz: {
-          navy: "#131921", // top header
-          navy2: "#232f3e", // sub header / footer top
-          navy3: "#37475a", // hover
-          footer: "#232f3e",
-          footerdark: "#131a22", // footer bottom bar
-          yellow: "#ffd814", // Add to Cart
-          yellowH: "#f7ca00",
-          orange: "#ffa41c", // Buy Now
-          orangeH: "#fa8900",
-          search: "#febd69", // search button
-          searchH: "#f3a847",
-          star: "#ffa41c",
-          link: "#007185",
-          linkH: "#c7511f", // link hover (orange)
-          price: "#0f1111",
-          deal: "#cc0c39",
-          bg: "#eaeded", // app background
-          border: "#d5d9d9",
-          borderdark: "#888c8c",
+          navy: "#0b0b0d", // top nav
+          navy2: "#141416", // panels / sub-surfaces
+          navy3: "#1f1f23", // hover
+          footer: "#0d0d0f",
+          footerdark: "#08080a",
+          yellow: "#d4f56a", // primary CTA (lime, pops on black)
+          yellowH: "#c2ea4f",
+          orange: "#d4f56a", // buy — same accent
+          orangeH: "#c2ea4f",
+          search: "#d4f56a",
+          searchH: "#c2ea4f",
+          star: "#facc15", // ratings stay gold
+          link: "#a1a1aa", // muted link
+          linkH: "#fafafa", // link hover → white
+          price: "#f4f4f5",
+          deal: "#f87171", // discount accent
+          bg: "#0a0a0b", // app background
+          border: "#262629", // hairline borders
+          borderdark: "#71717a",
         },
         ink: {
-          DEFAULT: "#0f1111",
-          soft: "#232f3e",
+          DEFAULT: "#f4f4f5", // primary text → near-white
+          soft: "#a1a1aa", // secondary text
         },
-        cream: "#eaeded",
+        cream: "#0a0a0b",
       },
       fontFamily: {
-        sans: ["'Amazon Ember'", "Arial", "Helvetica", "sans-serif"],
-        display: ["'Amazon Ember'", "Arial", "Helvetica", "sans-serif"],
+        sans: [
+          "-apple-system",
+          "BlinkMacSystemFont",
+          "'SF Pro Text'",
+          "'Inter'",
+          "'Segoe UI'",
+          "Roboto",
+          "'Helvetica Neue'",
+          "Arial",
+          "sans-serif",
+        ],
+        display: [
+          "-apple-system",
+          "BlinkMacSystemFont",
+          "'SF Pro Display'",
+          "'Inter'",
+          "'Segoe UI'",
+          "sans-serif",
+        ],
       },
       borderRadius: {
-        lg: "0.5rem",
-        xl: "0.5rem",
-        "2xl": "0.5rem",
-        "3xl": "0.625rem",
-        "4xl": "0.75rem",
+        lg: "0.75rem",
+        xl: "1rem",
+        "2xl": "1.25rem",
+        "3xl": "1.5rem",
+        "4xl": "2rem",
       },
       boxShadow: {
-        glow: "0 2px 5px rgba(15,17,17,0.15)",
-        "glow-lg": "0 4px 11px rgba(15,17,17,0.2)",
-        pop: "0 2px 5px rgba(15,17,17,0.15)",
-        soft: "0 1px 2px rgba(15,17,17,0.1)",
-        amz: "0 2px 8px rgba(15,17,17,0.15)",
+        glow: "0 0 0 1px rgba(255,255,255,0.04)",
+        "glow-lg": "0 20px 60px -20px rgba(0,0,0,0.8)",
+        pop: "0 8px 30px -12px rgba(0,0,0,0.7)",
+        soft: "0 1px 0 rgba(255,255,255,0.03)",
+        amz: "0 20px 50px -24px rgba(0,0,0,0.85)",
       },
       backgroundImage: {
-        "brand-gradient": "linear-gradient(180deg,#232f3e 0%,#131921 100%)",
-        "brand-gradient-soft": "linear-gradient(180deg,#37475a 0%,#232f3e 100%)",
+        "brand-gradient": "linear-gradient(180deg,#141416 0%,#0a0a0b 100%)",
+        "brand-gradient-soft": "linear-gradient(180deg,#1f1f23 0%,#141416 100%)",
       },
       keyframes: {
         "fade-up": {
-          from: { opacity: "0", transform: "translateY(16px)" },
+          from: { opacity: "0", transform: "translateY(18px)" },
           to: { opacity: "1", transform: "translateY(0)" },
         },
+        "fade-in": { from: { opacity: "0" }, to: { opacity: "1" } },
       },
       animation: {
-        "fade-up": "fade-up 0.4s ease both",
+        "fade-up": "fade-up 0.5s cubic-bezier(0.22,1,0.36,1) both",
+        "fade-in": "fade-in 0.6s ease both",
       },
     },
   },

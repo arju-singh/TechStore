@@ -11,6 +11,18 @@ const OrderItemSchema = new Schema(
     qty: { type: Number, required: true },
     // GST rate (%) snapshot for the tax invoice. Prices are GST-inclusive.
     gstRate: { type: Number, default: 18 },
+    // Marketplace attribution, snapshotted at purchase time. "" = house product.
+    // commissionRate is frozen here so payouts stay stable if the vendor's rate
+    // later changes. fulfillmentStatus lets each vendor progress their own lines
+    // independently of the customer-facing order `status`.
+    vendorSlug: { type: String, default: "" },
+    vendorName: { type: String, default: "" },
+    commissionRate: { type: Number, default: 0 },
+    fulfillmentStatus: {
+      type: String,
+      enum: ["pending", "shipped", "delivered"],
+      default: "pending",
+    },
   },
   { _id: false }
 );
@@ -60,6 +72,13 @@ const OrderSchema = new Schema(
     },
     razorpayOrderId: { type: String, default: "" },
     razorpayPaymentId: { type: String, default: "" },
+    // Retail (B2C) vs wholesale (B2B) order — set by the wholesale checkout.
+    orderType: {
+      type: String,
+      enum: ["retail", "wholesale"],
+      default: "retail",
+      index: true,
+    },
     // B2B: purchase-order reference and Net-30 credit due date.
     poNumber: { type: String, default: "" },
     creditDueDate: { type: String, default: "" },

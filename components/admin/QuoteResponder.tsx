@@ -53,7 +53,7 @@ export default function QuoteResponder({
       <p className="text-[11px] font-semibold uppercase tracking-wide text-fuchsia-700">
         {quotedTotal > 0 ? "Update quote" : "Send quote"}
       </p>
-      <p className="mb-1.5 text-[11px] text-slate-500">
+      <p className="mb-1.5 text-[11px] text-white/50">
         Requested at {formatINR(requestedTotal)}
       </p>
       <input
@@ -61,13 +61,13 @@ export default function QuoteResponder({
         onChange={(e) => setTotal(e.target.value)}
         type="number"
         placeholder="Quoted total ₹"
-        className="mb-1.5 w-full rounded border border-slate-200 px-2 py-1 text-sm outline-none focus:border-fuchsia-400"
+        className="mb-1.5 w-full rounded border border-white/10 px-2 py-1 text-sm outline-none focus:border-fuchsia-400"
       />
       <input
         value={note}
         onChange={(e) => setNote(e.target.value)}
         placeholder="Note (optional)"
-        className="mb-1.5 w-full rounded border border-slate-200 px-2 py-1 text-xs outline-none focus:border-fuchsia-400"
+        className="mb-1.5 w-full rounded border border-white/10 px-2 py-1 text-xs outline-none focus:border-fuchsia-400"
       />
       <button
         onClick={send}

@@ -9,6 +9,8 @@ import {
   type OrderItem,
 } from "@/lib/orders";
 import { computeTotals, unitPriceFor, moqError, type PricingContext } from "@/lib/pricing";
+import { getVendorBySlug } from "@/lib/vendors";
+import { resolveCommissionRate, platformCommissionRate } from "@/lib/payouts";
 import { enforceRateLimit, rateLimit } from "@/lib/rateLimit";
 import { validateAddress } from "@/lib/validation";
 import { checkPincode } from "@/lib/delivery";
@@ -126,6 +128,19 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Your cart is empty." }, { status: 400 });
   }
 
+  // Resolve each distinct vendor's commission rate once, snapshotting it onto
+  // every line so payouts stay stable even if the vendor's rate later changes.
+  const commissionByVendor = new Map<string, number>();
+  const commissionFor = async (vendorSlug: string): Promise<number> => {
+    if (!vendorSlug) return 0; // house product — no vendor commission
+    const cached = commissionByVendor.get(vendorSlug);
+    if (cached !== undefined) return cached;
+    const vendor = await getVendorBySlug(vendorSlug);
+    const rate = vendor ? resolveCommissionRate(vendor) : platformCommissionRate();
+    commissionByVendor.set(vendorSlug, rate);
+    return rate;
+  };
+
   const items: OrderItem[] = [];
   for (const raw of rawItems) {
     const slug = typeof raw?.slug === "string" ? raw.slug : "";
@@ -156,6 +171,7 @@ export async function POST(request: Request) {
     }
     // Effective per-unit price resolved server-side from the catalog + context.
     const unitPrice = unitPriceFor(product, qty, ctx);
+    const vendorSlug = product.vendorSlug ?? "";
     items.push({
       slug: product.slug,
       name: product.name,
@@ -165,6 +181,10 @@ export async function POST(request: Request) {
       mrp: product.mrp,
       qty,
       gstRate: typeof product.gstRate === "number" ? product.gstRate : 18,
+      vendorSlug,
+      vendorName: product.vendorName ?? "",
+      commissionRate: await commissionFor(vendorSlug),
+      fulfillmentStatus: "pending",
     });
   }
 

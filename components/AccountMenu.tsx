@@ -20,7 +20,7 @@ export default function AccountMenu() {
   }, []);
 
   if (loading) {
-    return <div className="h-9 w-20 animate-pulse rounded bg-white/10" />;
+    return <div className="h-9 w-20 animate-pulse rounded bg-white/[0.02]/10" />;
   }
 
   if (!user) {
@@ -65,44 +65,40 @@ export default function AccountMenu() {
       {open && (
         <div
           role="menu"
-          className="absolute right-0 mt-2 w-56 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-lg"
+          className="absolute right-0 mt-2 w-56 overflow-hidden rounded-xl border border-white/10 bg-white/[0.02] shadow-lg"
         >
-          <div className="border-b border-slate-100 px-4 py-3">
-            <p className="truncate text-sm font-semibold text-slate-800">
+          <div className="border-b border-white/10 px-4 py-3">
+            <p className="truncate text-sm font-semibold text-white/80">
               {user.name}
             </p>
-            <p className="truncate text-xs text-slate-500">{user.email}</p>
-            {user.isWholesaler ? (
+            <p className="truncate text-xs text-white/50">{user.email}</p>
+            {user.isWholesaler && (
               <span className="mt-1.5 inline-block rounded-full bg-blue-50 px-2 py-0.5 text-[11px] font-semibold text-blue-700">
                 Wholesale account
               </span>
-            ) : user.wholesaleStatus === "pending" ? (
-              <span className="mt-1.5 inline-block rounded-full bg-amber-50 px-2 py-0.5 text-[11px] font-semibold text-amber-700">
-                Wholesale · pending
-              </span>
-            ) : null}
+            )}
           </div>
           <Link
             href="/account"
             onClick={() => setOpen(false)}
-            className="block px-4 py-2.5 text-sm text-slate-700 hover:bg-slate-50"
+            className="block px-4 py-2.5 text-sm text-white/70 hover:bg-white/5"
             role="menuitem"
           >
             My account
           </Link>
           <Link
-            href="/business"
+            href={user.isWholesaler ? "/wholesale" : "/become-a-wholesaler"}
             onClick={() => setOpen(false)}
-            className="block px-4 py-2.5 text-sm text-slate-700 hover:bg-slate-50"
+            className="block px-4 py-2.5 text-sm text-white/70 hover:bg-white/5"
             role="menuitem"
           >
-            {user.isWholesaler ? "Business account" : "For Business"}
+            {user.isWholesaler ? "Wholesale portal" : "Become a wholesaler"}
           </Link>
           {user.role === "admin" && (
             <Link
               href="/admin"
               onClick={() => setOpen(false)}
-              className="block px-4 py-2.5 text-sm text-slate-700 hover:bg-slate-50"
+              className="block px-4 py-2.5 text-sm text-white/70 hover:bg-white/5"
               role="menuitem"
             >
               Admin panel

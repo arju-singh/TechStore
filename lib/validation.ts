@@ -71,11 +71,15 @@ export interface ProductInput {
   gstRate: number;
 }
 
-/** Clamp a GST rate to a sane set of values; default 18%. */
+/** Snap a GST rate to the nearest legal Indian slab; default 18%. */
 export function normalizeGstRate(raw: unknown): number {
+  const SLABS = [0, 5, 12, 18, 28];
   const n = typeof raw === "number" ? raw : Number(raw);
   if (!Number.isFinite(n) || n < 0) return 18;
-  return Math.min(28, n);
+  return SLABS.reduce(
+    (best, s) => (Math.abs(s - n) < Math.abs(best - n) ? s : best),
+    18
+  );
 }
 
 export function slugify(input: string): string {
@@ -315,4 +319,122 @@ export function validateAddress(
     return { error: "Please enter a valid 6-digit pincode." };
 
   return { address };
+}
+
+// Indian GSTIN: 15 chars — 2-digit state code, 10-char PAN, entity digit, 'Z',
+// checksum. Applications with a malformed tax number are rejected immediately.
+const GSTIN_RE =
+  /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$/;
+
+export const WHOLESALE_BUSINESS_TYPES = [
+  "pet_shop",
+  "distributor",
+  "breeder",
+  "veterinary_clinic",
+  "ngo",
+  "supermarket",
+  "wholesaler",
+  "retail_shop",
+  "importer",
+  "exporter",
+  "other",
+] as const;
+export type WholesaleBusinessType = (typeof WHOLESALE_BUSINESS_TYPES)[number];
+
+export interface WholesaleAddressInput {
+  line1: string;
+  line2: string;
+  city: string;
+  state: string;
+  pincode: string;
+  country: string;
+}
+
+export interface WholesalerApplicationInput {
+  businessName: string;
+  ownerName: string;
+  taxNumber: string;
+  tradeLicenseNumber: string;
+  businessType: WholesaleBusinessType;
+  email: string;
+  phone: string;
+  website: string;
+  expectedMonthlyPurchase: number;
+  categoriesInterested: string[];
+  businessAddress: WholesaleAddressInput;
+  warehouseAddress: WholesaleAddressInput;
+}
+
+/** Validate/normalize a wholesaler registration. Fails loud on bad input. */
+export function validateWholesalerApplication(
+  raw: any
+): { application: WholesalerApplicationInput } | { error: string } {
+  const s = (v: unknown) => (typeof v === "string" ? v.trim() : "");
+
+  const businessName = s(raw?.businessName);
+  if (businessName.length < 2)
+    return { error: "Please enter your business name." };
+
+  const ownerName = s(raw?.ownerName);
+  if (ownerName.length < 2)
+    return { error: "Please enter the owner's full name." };
+
+  const taxNumber = s(raw?.taxNumber).toUpperCase();
+  if (!GSTIN_RE.test(taxNumber))
+    return { error: "Tax number invalid: enter a valid 15-character GSTIN." };
+
+  const businessType = s(raw?.businessType);
+  if (!WHOLESALE_BUSINESS_TYPES.includes(businessType as WholesaleBusinessType))
+    return { error: "Please choose a valid business type." };
+
+  const email = s(raw?.email);
+  if (validateEmail(email))
+    return { error: "Please enter a valid business email address." };
+
+  const phone = s(raw?.phone);
+  if (!PHONE_RE.test(phone))
+    return { error: "Please enter a valid 10-digit business phone number." };
+
+  const addr = (a: any): WholesaleAddressInput => ({
+    line1: s(a?.line1),
+    line2: s(a?.line2),
+    city: s(a?.city),
+    state: s(a?.state),
+    pincode: s(a?.pincode),
+    country: s(a?.country) || "India",
+  });
+  const businessAddress = addr(raw?.businessAddress);
+  if (
+    businessAddress.line1.length < 4 ||
+    businessAddress.city.length < 2 ||
+    !PINCODE_RE.test(businessAddress.pincode)
+  )
+    return {
+      error: "Please enter a complete business address with a valid pincode.",
+    };
+  const warehouseAddress = addr(raw?.warehouseAddress);
+
+  const expectedMonthlyPurchase = Number(raw?.expectedMonthlyPurchase);
+  const categoriesInterested = Array.isArray(raw?.categoriesInterested)
+    ? raw.categoriesInterested.map(s).filter(Boolean)
+    : [];
+
+  return {
+    application: {
+      businessName,
+      ownerName,
+      taxNumber,
+      tradeLicenseNumber: s(raw?.tradeLicenseNumber),
+      businessType: businessType as WholesaleBusinessType,
+      email,
+      phone,
+      website: s(raw?.website),
+      expectedMonthlyPurchase: Number.isFinite(expectedMonthlyPurchase)
+        ? Math.max(0, expectedMonthlyPurchase)
+        : 0,
+      categoriesInterested,
+      businessAddress,
+      warehouseAddress,
+    },
+  };
 }

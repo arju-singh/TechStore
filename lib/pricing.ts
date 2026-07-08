@@ -87,11 +87,18 @@ export function unitPriceFor(
   for (const tier of p.priceTiers ?? []) {
     if (qty >= tier.minQty) candidates.push(tier.unitPrice);
   }
-  // An approved wholesaler gets their contract price at ANY quantity — but the
-  // MOQ is enforced separately at checkout (see moqError), so ordering below the
-  // minimum is blocked rather than silently repriced.
   if (ctx.isWholesaler && p.wholesale?.enabled) {
-    candidates.push(p.wholesale.unitPrice);
+    const tiers = p.wholesale.tiers ?? [];
+    if (tiers.length > 0) {
+      // Quantity bands: the wholesale rate applies only within a band's range.
+      for (const t of tiers) {
+        const within = qty >= t.minQty && (t.maxQty == null || qty <= t.maxQty);
+        if (within) candidates.push(t.unitPrice);
+      }
+    } else if (p.wholesale.unitPrice > 0) {
+      // Legacy single contract rate (MOQ enforced separately at checkout).
+      candidates.push(p.wholesale.unitPrice);
+    }
   }
   return Math.min(...candidates);
 }
@@ -109,8 +116,11 @@ export function moqError(
   name = "this item"
 ): string | null {
   if (!ctx.isWholesaler || !p.wholesale?.enabled) return null;
-  // Only enforce when the effective price IS the wholesale price (i.e. the
-  // buyer is genuinely benefiting from the contract rate on this line).
+  // Tier-based products self-gate: a band's rate only applies within its qty
+  // range, so there's nothing extra to enforce in the shared engine. The
+  // dedicated wholesale checkout enforces the product MOQ explicitly.
+  if ((p.wholesale.tiers?.length ?? 0) > 0) return null;
+  // Legacy single wholesale rate: enforce MOQ when the buyer benefits from it.
   const usingWholesalePrice = unitPriceFor(p, qty, ctx) === p.wholesale.unitPrice;
   if (usingWholesalePrice && qty < p.wholesale.moq) {
     return `${name}: minimum wholesale order is ${p.wholesale.moq} units (you have ${qty}).`;
@@ -122,7 +132,11 @@ export function moqError(
 export function bestPriceFor(p: Priceable, ctx: PricingContext): number {
   const candidates = [p.price];
   for (const tier of p.priceTiers ?? []) candidates.push(tier.unitPrice);
-  if (ctx.isWholesaler && p.wholesale?.enabled) candidates.push(p.wholesale.unitPrice);
+  if (ctx.isWholesaler && p.wholesale?.enabled) {
+    const tiers = p.wholesale.tiers ?? [];
+    if (tiers.length > 0) for (const t of tiers) candidates.push(t.unitPrice);
+    else if (p.wholesale.unitPrice > 0) candidates.push(p.wholesale.unitPrice);
+  }
   return Math.min(...candidates);
 }
 

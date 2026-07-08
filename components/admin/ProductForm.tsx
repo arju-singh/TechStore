@@ -8,6 +8,10 @@ interface Props {
   mode: "create" | "edit";
   categories: Category[];
   initial?: Product;
+  /** API base for create (POST) / edit (PUT `${basePath}/${slug}`). */
+  basePath?: string;
+  /** Where to return after a successful save. */
+  listPath?: string;
 }
 
 function specsToText(specs: Record<string, string>): string {
@@ -20,7 +24,13 @@ function tiersToText(tiers?: { minQty: number; unitPrice: number }[]): string {
   return (tiers ?? []).map((t) => `${t.minQty}: ${t.unitPrice}`).join("\n");
 }
 
-export default function ProductForm({ mode, categories, initial }: Props) {
+export default function ProductForm({
+  mode,
+  categories,
+  initial,
+  basePath = "/api/admin/products",
+  listPath = "/admin/products",
+}: Props) {
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
@@ -72,9 +82,7 @@ export default function ProductForm({ mode, categories, initial }: Props) {
         gstRate: Number(form.gstRate),
       };
       const url =
-        mode === "create"
-          ? "/api/admin/products"
-          : `/api/admin/products/${initial!.slug}`;
+        mode === "create" ? basePath : `${basePath}/${initial!.slug}`;
       const res = await fetch(url, {
         method: mode === "create" ? "POST" : "PUT",
         headers: { "Content-Type": "application/json" },
@@ -82,7 +90,7 @@ export default function ProductForm({ mode, categories, initial }: Props) {
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(data?.error || "Could not save product.");
-      router.push("/admin/products");
+      router.push(listPath);
       router.refresh();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not save product.");
@@ -108,11 +116,11 @@ export default function ProductForm({ mode, categories, initial }: Props) {
         />
         <Text label="Brand" value={form.brand} onChange={(v) => set("brand", v)} required />
         <label className="block">
-          <span className="mb-1 block text-sm font-medium text-slate-700">Category</span>
+          <span className="mb-1 block text-sm font-medium text-white/70">Category</span>
           <select
             value={form.category}
             onChange={(e) => set("category", e.target.value)}
-            className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm outline-none focus:border-brand-400 focus:ring-2 focus:ring-brand-100"
+            className="w-full rounded-lg border border-white/10 bg-white/[0.02] px-3 py-2.5 text-sm outline-none focus:border-brand-400 focus:ring-2 focus:ring-brand-100"
           >
             {categories.map((c) => (
               <option key={c.slug} value={c.slug}>
@@ -131,20 +139,20 @@ export default function ProductForm({ mode, categories, initial }: Props) {
       </div>
 
       <label className="block">
-        <span className="mb-1 block text-sm font-medium text-slate-700">Description</span>
+        <span className="mb-1 block text-sm font-medium text-white/70">Description</span>
         <textarea
           value={form.description}
           onChange={(e) => set("description", e.target.value)}
           rows={3}
-          className="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm outline-none focus:border-brand-400 focus:bg-white focus:ring-2 focus:ring-brand-100"
+          className="w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2.5 text-sm outline-none focus:border-brand-400 focus:bg-white/[0.02] focus:ring-2 focus:ring-brand-100"
         />
       </label>
 
       <label className="block">
-        <span className="mb-1 block text-sm font-medium text-slate-700">
+        <span className="mb-1 block text-sm font-medium text-white/70">
           Specifications
         </span>
-        <span className="mb-1 block text-xs text-slate-400">
+        <span className="mb-1 block text-xs text-white/40">
           One per line as <code>Key: Value</code> — e.g. <code>RAM: 8GB</code>
         </span>
         <textarea
@@ -152,7 +160,7 @@ export default function ProductForm({ mode, categories, initial }: Props) {
           onChange={(e) => set("specs", e.target.value)}
           rows={5}
           placeholder={"Display: 6.5\" AMOLED\nBattery: 5000mAh"}
-          className="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5 font-mono text-sm outline-none focus:border-brand-400 focus:bg-white focus:ring-2 focus:ring-brand-100"
+          className="w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2.5 font-mono text-sm outline-none focus:border-brand-400 focus:bg-white/[0.02] focus:ring-2 focus:ring-brand-100"
         />
       </label>
 
@@ -163,10 +171,10 @@ export default function ProductForm({ mode, categories, initial }: Props) {
         </legend>
 
         <label className="block">
-          <span className="mb-1 block text-sm font-medium text-slate-700">
+          <span className="mb-1 block text-sm font-medium text-white/70">
             Public volume tiers
           </span>
-          <span className="mb-1 block text-xs text-slate-400">
+          <span className="mb-1 block text-xs text-white/40">
             One per line as <code>minQty: unitPrice</code> — e.g. <code>10: 599</code>.
             Visible to everyone; the price must be at or below the selling price and
             drop as quantity rises.
@@ -176,7 +184,7 @@ export default function ProductForm({ mode, categories, initial }: Props) {
             onChange={(e) => set("priceTiers", e.target.value)}
             rows={3}
             placeholder={"10: 599\n50: 499\n100: 429"}
-            className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2.5 font-mono text-sm outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
+            className="w-full rounded-lg border border-white/10 bg-white/[0.02] px-3 py-2.5 font-mono text-sm outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
           />
         </label>
 
@@ -187,7 +195,7 @@ export default function ProductForm({ mode, categories, initial }: Props) {
             onChange={(e) => set("wholesaleEnabled", e.target.checked)}
             className="h-4 w-4 accent-blue-600"
           />
-          <span className="text-sm font-medium text-slate-700">
+          <span className="text-sm font-medium text-white/70">
             Offer a wholesale price to approved businesses
           </span>
         </label>
@@ -217,7 +225,7 @@ export default function ProductForm({ mode, categories, initial }: Props) {
           onChange={(e) => set("featured", e.target.checked)}
           className="h-4 w-4 accent-brand-600"
         />
-        <span className="text-sm text-slate-700">Feature on homepage</span>
+        <span className="text-sm text-white/70">Feature on homepage</span>
       </label>
 
       <div className="flex gap-3 pt-2">
@@ -230,8 +238,8 @@ export default function ProductForm({ mode, categories, initial }: Props) {
         </button>
         <button
           type="button"
-          onClick={() => router.push("/admin/products")}
-          className="rounded-lg border border-slate-200 px-5 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50"
+          onClick={() => router.push(listPath)}
+          className="rounded-lg border border-white/10 px-5 py-2.5 text-sm font-semibold text-white/70 hover:bg-white/5"
         >
           Cancel
         </button>
@@ -261,7 +269,7 @@ function Text({
 }) {
   return (
     <label className="block">
-      <span className="mb-1 block text-sm font-medium text-slate-700">{label}</span>
+      <span className="mb-1 block text-sm font-medium text-white/70">{label}</span>
       <input
         type={type}
         value={value}
@@ -270,9 +278,9 @@ function Text({
         placeholder={placeholder}
         disabled={disabled}
         step={type === "number" ? "any" : undefined}
-        className="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm outline-none focus:border-brand-400 focus:bg-white focus:ring-2 focus:ring-brand-100 disabled:bg-slate-100 disabled:text-slate-400"
+        className="w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2.5 text-sm outline-none focus:border-brand-400 focus:bg-white/[0.02] focus:ring-2 focus:ring-brand-100 disabled:bg-white/10 disabled:text-white/40"
       />
-      {hint && <span className="mt-1 block text-xs text-slate-400">{hint}</span>}
+      {hint && <span className="mt-1 block text-xs text-white/40">{hint}</span>}
     </label>
   );
 }

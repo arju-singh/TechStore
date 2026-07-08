@@ -52,8 +52,8 @@ export default function PincodeCheck() {
   }
 
   return (
-    <div className="rounded-xl border border-slate-200 bg-white p-4">
-      <div className="flex items-center gap-2 text-sm font-semibold text-slate-800">
+    <div className="rounded-xl border border-white/10 bg-white/[0.02] p-4">
+      <div className="flex items-center gap-2 text-sm font-semibold text-white/80">
         <svg viewBox="0 0 24 24" fill="none" className="h-5 w-5 text-brand-600" stroke="currentColor" strokeWidth={1.8}>
           <path d="M12 21s-7-5.2-7-10a7 7 0 1 1 14 0c0 4.8-7 10-7 10Z" strokeLinejoin="round" />
           <circle cx="12" cy="11" r="2.5" />
@@ -69,7 +69,7 @@ export default function PincodeCheck() {
           value={pincode}
           onChange={(e) => setPincode(e.target.value.replace(/\D/g, ""))}
           placeholder="Enter 6-digit pincode"
-          className="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm outline-none transition focus:border-brand-400 focus:bg-white focus:ring-2 focus:ring-brand-100"
+          className="w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm outline-none transition focus:border-brand-400 focus:bg-white/[0.02] focus:ring-2 focus:ring-brand-100"
         />
         <button
           type="submit"

@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { findUserByEmail } from "@/lib/users";
-import { createSession, verifyPassword, publicUserWithRole } from "@/lib/auth";
+import { createSession, verifyPassword, enrichPublicUser } from "@/lib/auth";
 import { enforceRateLimit } from "@/lib/rateLimit";
 
 export async function POST(request: Request) {
@@ -36,5 +36,5 @@ export async function POST(request: Request) {
   if (!ok) return invalid;
 
   await createSession(user);
-  return NextResponse.json({ user: publicUserWithRole(user) });
+  return NextResponse.json({ user: await enrichPublicUser(user) });
 }

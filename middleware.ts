@@ -29,36 +29,83 @@ function adminEmails(): string[] {
     .filter(Boolean);
 }
 
-async function isAdminRequest(req: NextRequest): Promise<boolean> {
+/** Verify the session cookie and return its JWT claims, or null if invalid. */
+async function sessionPayload(
+  req: NextRequest
+): Promise<Record<string, unknown> | null> {
   const token = req.cookies.get(COOKIE_NAME)?.value;
-  if (!token) return false;
+  if (!token) return null;
   try {
     const { payload } = await jwtVerify(token, getSecret());
-    if (payload.role === "admin") return true;
-    const email = typeof payload.email === "string" ? payload.email : "";
-    return adminEmails().includes(email.trim().toLowerCase());
+    return payload as Record<string, unknown>;
   } catch {
-    return false; // expired / tampered / invalid
+    return null; // expired / tampered / invalid
   }
+}
+
+function isAdminPayload(payload: Record<string, unknown> | null): boolean {
+  if (!payload) return false;
+  if (payload.role === "admin") return true;
+  const email = typeof payload.email === "string" ? payload.email : "";
+  return adminEmails().includes(email.trim().toLowerCase());
 }
 
 export async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
-  const isApi = pathname.startsWith("/api/admin");
+  const isAdminApi = pathname.startsWith("/api/admin");
   const isAdminPage = pathname.startsWith("/admin");
-  if (!isApi && !isAdminPage) return NextResponse.next();
-
-  if (await isAdminRequest(req)) return NextResponse.next();
-
-  if (isApi) {
-    return NextResponse.json({ error: "Forbidden." }, { status: 403 });
+  const isVendorApi = pathname.startsWith("/api/vendor");
+  const isVendorPage = pathname.startsWith("/vendor");
+  // Wholesale portal (not the public /become-a-wholesaler landing) + its APIs.
+  const isWholesaleApi =
+    pathname.startsWith("/api/wholesale") ||
+    pathname.startsWith("/api/wholesaler");
+  const isWholesalePage = pathname.startsWith("/wholesale");
+  if (
+    !isAdminApi &&
+    !isAdminPage &&
+    !isVendorApi &&
+    !isVendorPage &&
+    !isWholesaleApi &&
+    !isWholesalePage
+  ) {
+    return NextResponse.next();
   }
-  // Admin page: bounce to login, preserving where they were headed.
+
+  const payload = await sessionPayload(req);
+
+  // Admin surfaces: require an admin session (authoritative re-check still runs
+  // in each handler/layout — this is defense-in-depth).
+  if (isAdminApi || isAdminPage) {
+    if (isAdminPayload(payload)) return NextResponse.next();
+    if (isAdminApi) {
+      return NextResponse.json({ error: "Forbidden." }, { status: 403 });
+    }
+    const loginUrl = new URL("/login", req.url);
+    loginUrl.searchParams.set("next", pathname);
+    return NextResponse.redirect(loginUrl);
+  }
+
+  // Vendor + wholesale surfaces: require any logged-in session at the edge.
+  // Whether the user owns an APPROVED vendor / wholesaler profile is decided
+  // authoritatively by the layout/handlers (getVendorUser / getWholesalerUser).
+  if (payload) return NextResponse.next();
+  if (isVendorApi || isWholesaleApi) {
+    return NextResponse.json({ error: "Please log in." }, { status: 401 });
+  }
   const loginUrl = new URL("/login", req.url);
   loginUrl.searchParams.set("next", pathname);
   return NextResponse.redirect(loginUrl);
 }
 
 export const config = {
-  matcher: ["/admin/:path*", "/api/admin/:path*"],
+  matcher: [
+    "/admin/:path*",
+    "/api/admin/:path*",
+    "/vendor/:path*",
+    "/api/vendor/:path*",
+    "/wholesale/:path*",
+    "/api/wholesale/:path*",
+    "/api/wholesaler/:path*",
+  ],
 };

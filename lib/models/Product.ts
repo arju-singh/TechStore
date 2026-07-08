@@ -8,11 +8,22 @@ const PriceTierSchema = new Schema(
   { _id: false }
 );
 
+const WholesaleTierSchema = new Schema(
+  {
+    minQty: { type: Number, required: true },
+    maxQty: { type: Number, default: null }, // null = open-ended (highest band)
+    unitPrice: { type: Number, required: true },
+  },
+  { _id: false }
+);
+
 const WholesaleSchema = new Schema(
   {
     enabled: { type: Boolean, default: false },
-    unitPrice: { type: Number, default: 0 },
+    unitPrice: { type: Number, default: 0 }, // legacy single contract rate
     moq: { type: Number, default: 1 },
+    // Modern B2B quantity bands, vendor-set, capped by admin max discount.
+    tiers: { type: [WholesaleTierSchema], default: [] },
   },
   { _id: false }
 );
@@ -38,6 +49,10 @@ const ProductSchema = new Schema(
     wholesale: { type: WholesaleSchema, default: () => ({ enabled: false, unitPrice: 0, moq: 1 }) },
     // GST rate (%) — prices are GST-inclusive.
     gstRate: { type: Number, default: 18 },
+    // Marketplace: the vendor selling this SKU. "" = sold by TechStore (house).
+    // Linked by slug so it's stable across seed / in-memory / Mongo (no _id needed).
+    vendorSlug: { type: String, default: "", index: true },
+    vendorName: { type: String, default: "" },
   },
   { timestamps: true }
 );

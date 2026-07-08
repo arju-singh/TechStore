@@ -61,13 +61,13 @@ export default function PricingRow({ product }: { product: Product }) {
   }
 
   const inputCls =
-    "w-full rounded border border-slate-200 px-2 py-1 text-sm outline-none focus:border-blue-400 focus:ring-1 focus:ring-blue-100";
+    "w-full rounded border border-white/10 px-2 py-1 text-sm outline-none focus:border-blue-400 focus:ring-1 focus:ring-blue-100";
 
   return (
-    <tr className="align-top hover:bg-slate-50">
+    <tr className="align-top hover:bg-white/5">
       <td className="px-3 py-3">
-        <div className="font-medium text-slate-800">{product.name}</div>
-        <div className="text-xs text-slate-400">
+        <div className="font-medium text-white/80">{product.name}</div>
+        <div className="text-xs text-white/40">
           {formatINR(product.price)} · {product.category}
         </div>
       </td>
@@ -83,7 +83,7 @@ export default function PricingRow({ product }: { product: Product }) {
         />
       </td>
       <td className="px-3 py-3 w-64">
-        <label className="flex items-center gap-1.5 text-xs text-slate-600">
+        <label className="flex items-center gap-1.5 text-xs text-white/70">
           <input type="checkbox" checked={wEnabled} onChange={(e) => setWEnabled(e.target.checked)} className="h-4 w-4 accent-blue-600" />
           Wholesale
         </label>
@@ -107,7 +107,7 @@ export default function PricingRow({ product }: { product: Product }) {
             <button
               onClick={applyDefaults}
               type="button"
-              className="rounded border border-slate-200 px-2 py-1 text-xs font-medium text-slate-600 hover:bg-slate-50"
+              className="rounded border border-white/10 px-2 py-1 text-xs font-medium text-white/70 hover:bg-white/5"
             >
               Auto
             </button>

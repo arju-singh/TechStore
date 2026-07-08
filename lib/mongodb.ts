@@ -36,3 +36,17 @@ export async function connectToDatabase(): Promise<typeof mongoose> {
   cached.conn = await cached.promise;
   return cached.conn;
 }
+
+/**
+ * Assert a database is configured. Used by DB-only modules (the wholesale
+ * module) that must NEVER fall back to in-memory / seed data — they fail loudly
+ * so a missing/misconfigured database is obvious instead of being silently
+ * papered over with fabricated records.
+ */
+export function requireDatabase(): void {
+  if (!hasDatabase) {
+    throw new Error(
+      "This feature requires a database. Set MONGODB_URI in the environment."
+    );
+  }
+}

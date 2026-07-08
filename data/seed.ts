@@ -1,445 +1,423 @@
-import type { Category, Product } from "@/lib/types";
+import type { Category, Product, Vendor } from "@/lib/types";
 import type { Coupon } from "@/lib/coupons";
 
 /**
- * Local sample catalog. This is the single source of truth for `npm run seed`
- * (which pushes it into MongoDB) AND the fallback the storefront renders from
- * when no MONGODB_URI is configured. Images use picsum.photos seeded URLs so
- * they are deterministic and need no API key.
+ * Local sample catalog — REAL products with matching real photos. Images are
+ * hosted on dummyjson's CDN (real product photography, license-clean for demo
+ * use); swap the `image` URLs for your own product shots anytime. This is the
+ * single source of truth for `npm run seed` and the no-database fallback.
  */
 
+/** Picsum placeholder (used only for demo vendor logos). */
 const img = (seed: string) => `https://picsum.photos/seed/${seed}/700/700`;
 
+/** Real product photo on the dummyjson CDN. */
+const dj = (cat: string, slug: string) =>
+  `https://cdn.dummyjson.com/product-images/${cat}/${slug}/thumbnail.webp`;
+
 export const categories: Category[] = [
-  { slug: "smartphones", name: "Smartphones", tagline: "Flagship to budget, all unlocked", image: img("cat-phones") },
-  { slug: "laptops", name: "Laptops", tagline: "Ultrabooks, gaming & work machines", image: img("cat-laptops") },
-  { slug: "audio", name: "Audio", tagline: "Headphones, earbuds & speakers", image: img("cat-audio") },
-  { slug: "wearables", name: "Wearables", tagline: "Smartwatches & fitness bands", image: img("cat-wearables") },
-  { slug: "cameras", name: "Cameras", tagline: "Mirrorless, action & instant", image: img("cat-cameras") },
-  { slug: "accessories", name: "Accessories", tagline: "Chargers, cables & more", image: img("cat-accessories") },
+  { slug: "smartphones", name: "Smartphones", tagline: "Flagship to everyday, all unlocked", image: dj("smartphones", "iphone-13-pro") },
+  { slug: "laptops", name: "Laptops", tagline: "Ultrabooks, creator & work machines", image: dj("laptops", "apple-macbook-pro-14-inch-space-grey") },
+  { slug: "tablets", name: "Tablets", tagline: "iPads & Android tablets", image: dj("tablets", "ipad-mini-2021-starlight") },
+  { slug: "audio", name: "Audio", tagline: "Earbuds, headphones & speakers", image: dj("mobile-accessories", "apple-airpods-max-silver") },
+  { slug: "wearables", name: "Wearables", tagline: "Smartwatches & timepieces", image: dj("mobile-accessories", "apple-watch-series-4-gold") },
+  { slug: "accessories", name: "Accessories", tagline: "Chargers, cases & power", image: dj("mobile-accessories", "apple-magsafe-battery-pack") },
 ];
+
+/**
+ * Demo marketplace vendors — populate "Sold by", /stores and admin Stores out of
+ * the box. To operate one for real, sign up and apply at /vendor/apply.
+ */
+export const vendors: Vendor[] = [
+  {
+    id: "ven_gadget-galaxy",
+    slug: "gadget-galaxy",
+    name: "Gadget Galaxy",
+    ownerUserId: "seed-owner-gadget-galaxy",
+    email: "seller@gadgetgalaxy.example",
+    phone: "+91 98200 10001",
+    description: "Independent multi-brand electronics seller — phones and laptops at keen prices, dispatched from Mumbai.",
+    logo: img("vendor-gadget-galaxy"),
+    status: "approved",
+    commissionRate: null,
+    gstin: "27AAECG1234F1Z5",
+    address: { line1: "12 Linking Road", line2: "Bandra West", city: "Mumbai", state: "Maharashtra", pincode: "400050" },
+    policies: "7-day returns on unopened items. Ships within 24 hours on business days.",
+    createdAt: "2026-01-05T00:00:00.000Z",
+  },
+  {
+    id: "ven_soundstage",
+    slug: "soundstage",
+    name: "SoundStage Audio",
+    ownerUserId: "seed-owner-soundstage",
+    email: "hello@soundstage.example",
+    phone: "+91 98200 10002",
+    description: "Audio specialists. Earbuds, headphones and speakers, hand-picked and demoed before they ship.",
+    logo: img("vendor-soundstage"),
+    status: "approved",
+    commissionRate: 12,
+    gstin: "29AAFCS5678K1Z2",
+    address: { line1: "45 Brigade Road", line2: "", city: "Bengaluru", state: "Karnataka", pincode: "560001" },
+    policies: "10-day returns. Free replacement on DOA units.",
+    createdAt: "2026-01-12T00:00:00.000Z",
+  },
+  {
+    id: "ven_snapgear",
+    slug: "snapgear",
+    name: "SnapGear",
+    ownerUserId: "seed-owner-snapgear",
+    email: "store@snapgear.example",
+    phone: "+91 98200 10003",
+    description: "Tablets, wearables and creator gear from a family-run shop — with real advice.",
+    logo: img("vendor-snapgear"),
+    status: "approved",
+    commissionRate: null,
+    gstin: "07AAGCS9012M1Z8",
+    address: { line1: "88 Nehru Place", line2: "", city: "New Delhi", state: "Delhi", pincode: "110019" },
+    policies: "7-day returns. 6-month seller warranty on all devices.",
+    createdAt: "2026-01-20T00:00:00.000Z",
+  },
+];
+
+/** Which vendor sells which product (by product slug). Unlisted = house product. */
+const VENDOR_OF: Record<string, string> = {
+  "iphone-x": "gadget-galaxy",
+  "samsung-galaxy-s10": "gadget-galaxy",
+  "oppo-f19-pro-plus": "gadget-galaxy",
+  "realme-xt": "gadget-galaxy",
+  "lenovo-yoga-920": "gadget-galaxy",
+  "apple-airpods": "soundstage",
+  "apple-airpods-max": "soundstage",
+  "beats-flex": "soundstage",
+  "amazon-echo-plus": "soundstage",
+  "homepod-mini": "soundstage",
+  "ipad-mini": "snapgear",
+  "samsung-galaxy-tab-s8-plus": "snapgear",
+  "apple-watch-series-4": "snapgear",
+  "magsafe-battery-pack": "snapgear",
+};
 
 const rawProducts: Product[] = [
   // Smartphones
   {
-    slug: "aurora-x5-pro",
-    name: "Aurora X5 Pro 5G (256GB)",
-    brand: "Aurora",
+    slug: "iphone-13-pro",
+    name: "Apple iPhone 13 Pro (256GB)",
+    brand: "Apple",
     category: "smartphones",
-    description:
-      "Flagship 6.7\" LTPO AMOLED display with 120Hz refresh, a 50MP triple camera and all-day 5000mAh battery with 68W fast charging.",
-    mrp: 79999,
-    price: 64999,
-    image: img("aurora-x5-pro"),
-    rating: 4.6,
-    numReviews: 2143,
-    stock: 24,
-    featured: true,
-    specs: { Display: "6.7\" LTPO AMOLED 120Hz", Chipset: "Snapdragon 8 Gen 3", RAM: "12GB", Storage: "256GB", Battery: "5000mAh, 68W", Camera: "50MP + 12MP + 8MP" },
+    description: "6.1\" Super Retina XDR ProMotion display, A15 Bionic, and a Pro camera system with 3x telephoto and cinematic mode.",
+    mrp: 105900, price: 91999, image: dj("smartphones", "iphone-13-pro"),
+    rating: 4.7, numReviews: 4231, stock: 40, featured: true,
+    specs: { Display: "6.1\" OLED 120Hz", Chip: "A15 Bionic", Storage: "256GB", Camera: "12MP triple, 3x tele", Battery: "Up to 22h video" },
   },
   {
-    slug: "nova-lite-4g",
-    name: "Nova Lite (128GB)",
-    brand: "Nova",
+    slug: "iphone-x",
+    name: "Apple iPhone X (64GB)",
+    brand: "Apple",
     category: "smartphones",
-    description:
-      "Everyday performer with a crisp 6.5\" 90Hz display, dependable 5000mAh battery and a clean, bloat-free software experience.",
-    mrp: 16999,
-    price: 12499,
-    image: img("nova-lite-4g"),
-    rating: 4.2,
-    numReviews: 5821,
-    stock: 60,
-    featured: false,
-    specs: { Display: "6.5\" IPS 90Hz", Chipset: "Helio G99", RAM: "6GB", Storage: "128GB", Battery: "5000mAh, 18W", Camera: "50MP + 2MP" },
-    priceTiers: [
-      { minQty: 5, unitPrice: 11999 },
-      { minQty: 10, unitPrice: 11499 },
-    ],
-    wholesale: { enabled: true, unitPrice: 10499, moq: 10 },
+    description: "The phone that introduced the notch and Face ID — a 5.8\" Super Retina OLED with a dual 12MP camera.",
+    mrp: 86900, price: 74999, image: dj("smartphones", "iphone-x"),
+    rating: 4.3, numReviews: 2890, stock: 37, featured: false,
+    specs: { Display: "5.8\" OLED", Chip: "A11 Bionic", Storage: "64GB", Camera: "12MP dual", Security: "Face ID" },
   },
   {
-    slug: "pulse-fold-z",
-    name: "Pulse Fold Z (512GB)",
-    brand: "Pulse",
+    slug: "samsung-galaxy-s10",
+    name: "Samsung Galaxy S10 (128GB)",
+    brand: "Samsung",
     category: "smartphones",
-    description:
-      "Foldable 7.6\" main display that slips into your pocket. Multitask like a tablet, call like a phone.",
-    mrp: 149999,
-    price: 134999,
-    image: img("pulse-fold-z"),
-    rating: 4.4,
-    numReviews: 612,
-    stock: 8,
-    featured: true,
-    specs: { Display: "7.6\" Foldable AMOLED", Chipset: "Snapdragon 8 Gen 3", RAM: "12GB", Storage: "512GB", Battery: "4400mAh, 25W", Camera: "50MP + 12MP + 10MP" },
+    description: "6.1\" Dynamic AMOLED with an in-display fingerprint sensor and a versatile triple camera.",
+    mrp: 66900, price: 57999, image: dj("smartphones", "samsung-galaxy-s10"),
+    rating: 4.4, numReviews: 5120, stock: 22, featured: false,
+    specs: { Display: "6.1\" AMOLED", Chip: "Exynos 9820", Storage: "128GB", Camera: "12MP + 12MP + 16MP", Battery: "3400mAh" },
   },
   {
-    slug: "aurora-a3",
-    name: "Aurora A3 (128GB)",
-    brand: "Aurora",
+    slug: "oppo-f19-pro-plus",
+    name: "Oppo F19 Pro+ 5G (128GB)",
+    brand: "Oppo",
     category: "smartphones",
-    description:
-      "Sleek mid-ranger with a 64MP OIS camera and 33W charging that tops up in a hurry.",
-    mrp: 24999,
-    price: 19999,
-    image: img("aurora-a3"),
-    rating: 4.3,
-    numReviews: 3390,
-    stock: 41,
-    featured: false,
-    specs: { Display: "6.4\" AMOLED 90Hz", Chipset: "Dimensity 7200", RAM: "8GB", Storage: "128GB", Battery: "4800mAh, 33W", Camera: "64MP OIS + 8MP" },
+    description: "Slim 5G mid-ranger with a 6.43\" AMOLED, 50W flash charge and a 48MP AI quad camera.",
+    mrp: 37900, price: 32999, image: dj("smartphones", "oppo-f19-pro-plus"),
+    rating: 4.2, numReviews: 1780, stock: 78, featured: false,
+    specs: { Display: "6.43\" AMOLED", Chip: "Dimensity 800U", Storage: "128GB", Charging: "50W", Camera: "48MP quad" },
+  },
+  {
+    slug: "realme-xt",
+    name: "Realme XT (128GB)",
+    brand: "Realme",
+    category: "smartphones",
+    description: "64MP quad-camera phone with a 6.4\" Super AMOLED display and VOOC fast charging.",
+    mrp: 33900, price: 28999, image: dj("smartphones", "realme-xt"),
+    rating: 4.5, numReviews: 3410, stock: 80, featured: false,
+    specs: { Display: "6.4\" AMOLED", Chip: "Snapdragon 712", Storage: "128GB", Camera: "64MP quad", Battery: "4000mAh" },
+  },
+  {
+    slug: "vivo-x21",
+    name: "Vivo X21 (128GB)",
+    brand: "Vivo",
+    category: "smartphones",
+    description: "6.28\" FHD+ AMOLED with an in-display fingerprint scanner and dual rear cameras.",
+    mrp: 47900, price: 41999, image: dj("smartphones", "vivo-x21"),
+    rating: 4.1, numReviews: 940, stock: 15, featured: false,
+    specs: { Display: "6.28\" AMOLED", Chip: "Snapdragon 660", Storage: "128GB", Camera: "12MP + 5MP", Battery: "3200mAh" },
   },
 
   // Laptops
   {
-    slug: "zenbook-air-14",
-    name: "ZenBook Air 14 (M-series, 512GB)",
-    brand: "ZenBook",
+    slug: "macbook-pro-14",
+    name: "Apple MacBook Pro 14\" (M-series, Space Grey)",
+    brand: "Apple",
     category: "laptops",
-    description:
-      "Featherweight 1.1kg ultrabook with a stunning 14\" OLED panel and 18-hour battery for all-day work anywhere.",
-    mrp: 114999,
-    price: 99999,
-    image: img("zenbook-air-14"),
-    rating: 4.7,
-    numReviews: 1287,
-    stock: 15,
-    featured: true,
-    specs: { Display: "14\" 2.8K OLED", CPU: "10-core", RAM: "16GB", Storage: "512GB SSD", Weight: "1.1kg", Battery: "Up to 18h" },
+    description: "14.2\" Liquid Retina XDR, blistering performance and all-day battery in a pro-grade aluminium body.",
+    mrp: 194900, price: 169900, image: dj("laptops", "apple-macbook-pro-14-inch-space-grey"),
+    rating: 4.8, numReviews: 1980, stock: 24, featured: true,
+    specs: { Display: "14.2\" Liquid Retina XDR", RAM: "16GB", Storage: "512GB SSD", Ports: "3x TB4, HDMI, SD", Battery: "Up to 18h" },
   },
   {
-    slug: "raptor-15-gaming",
-    name: "Raptor 15 Gaming Laptop (RTX, 1TB)",
-    brand: "Raptor",
+    slug: "dell-xps-13",
+    name: "Dell XPS 13 (9300)",
+    brand: "Dell",
     category: "laptops",
-    description:
-      "165Hz display, ray-tracing GPU and a vapor-chamber cooling system built for serious frame rates.",
-    mrp: 179999,
-    price: 154999,
-    image: img("raptor-15-gaming"),
-    rating: 4.5,
-    numReviews: 934,
-    stock: 12,
-    featured: true,
-    specs: { Display: "15.6\" QHD 165Hz", CPU: "8-core", GPU: "RTX 4060 8GB", RAM: "16GB", Storage: "1TB SSD", Cooling: "Vapor chamber" },
+    description: "Featherweight 13.4\" InfinityEdge ultrabook with a stunning display and premium machined chassis.",
+    mrp: 142900, price: 124900, image: dj("laptops", "new-dell-xps-13-9300-laptop"),
+    rating: 4.4, numReviews: 1120, stock: 74, featured: false,
+    specs: { Display: "13.4\" FHD+", CPU: "Intel Core i7", RAM: "16GB", Storage: "512GB SSD", Weight: "1.2kg" },
   },
   {
-    slug: "workbook-pro-16",
-    name: "WorkBook Pro 16 (1TB)",
-    brand: "WorkBook",
+    slug: "asus-zenbook-pro-duo",
+    name: "Asus Zenbook Pro Duo (Dual Screen)",
+    brand: "Asus",
     category: "laptops",
-    description:
-      "Creator-grade 16\" mini-LED display with a 100% DCI-P3 gamut, perfect for photo and video editing.",
-    mrp: 199999,
-    price: 184999,
-    image: img("workbook-pro-16"),
-    rating: 4.8,
-    numReviews: 421,
-    stock: 9,
-    featured: false,
-    specs: { Display: "16\" Mini-LED 120Hz", CPU: "12-core", RAM: "32GB", Storage: "1TB SSD", Ports: "3x USB-C, HDMI, SD", Battery: "Up to 21h" },
+    description: "Creator laptop with a secondary ScreenPad Plus display above the keyboard for a true multitasking canvas.",
+    mrp: 169900, price: 149900, image: dj("laptops", "asus-zenbook-pro-dual-screen-laptop"),
+    rating: 4.5, numReviews: 640, stock: 45, featured: false,
+    specs: { Display: "15.6\" 4K OLED + ScreenPad", CPU: "Intel Core i9", RAM: "32GB", GPU: "RTX", Storage: "1TB SSD" },
   },
   {
-    slug: "everyday-14-chrome",
-    name: "Everyday 14 Cloudbook",
-    brand: "Everyday",
+    slug: "huawei-matebook-x-pro",
+    name: "Huawei MateBook X Pro",
+    brand: "Huawei",
     category: "laptops",
-    description:
-      "Snappy, affordable and secure — ideal for browsing, streaming and study. Boots in seconds.",
-    mrp: 32999,
-    price: 24999,
-    image: img("everyday-14-chrome"),
-    rating: 4.1,
-    numReviews: 2765,
-    stock: 50,
-    featured: false,
-    specs: { Display: "14\" FHD IPS", CPU: "Quad-core", RAM: "8GB", Storage: "128GB eMMC", Weight: "1.4kg", Battery: "Up to 12h" },
+    description: "Gorgeous 3:2 FullView touch display in a slim, light magnesium-alloy body.",
+    mrp: 132900, price: 116900, image: dj("laptops", "huawei-matebook-x-pro"),
+    rating: 4.9, numReviews: 820, stock: 75, featured: false,
+    specs: { Display: "13.9\" 3K touch", CPU: "Intel Core i7", RAM: "16GB", Storage: "1TB SSD", Weight: "1.33kg" },
+  },
+  {
+    slug: "lenovo-yoga-920",
+    name: "Lenovo Yoga 920 (2-in-1)",
+    brand: "Lenovo",
+    category: "laptops",
+    description: "Convertible 2-in-1 with a 360° hinge, far-field mics and a precision pen for notes and sketches.",
+    mrp: 104900, price: 89900, image: dj("laptops", "lenovo-yoga-920"),
+    rating: 4.2, numReviews: 510, stock: 40, featured: false,
+    specs: { Display: "13.9\" FHD touch", CPU: "Intel Core i7", RAM: "16GB", Storage: "512GB SSD", Hinge: "360° watchband" },
+  },
+
+  // Tablets
+  {
+    slug: "ipad-mini",
+    name: "Apple iPad mini (2021, Starlight)",
+    brand: "Apple",
+    category: "tablets",
+    description: "8.3\" Liquid Retina, A15 Bionic and Apple Pencil (2nd gen) support in a pocketable, all-screen design.",
+    mrp: 51900, price: 44900, image: dj("tablets", "ipad-mini-2021-starlight"),
+    rating: 4.7, numReviews: 2210, stock: 47, featured: true,
+    specs: { Display: "8.3\" Liquid Retina", Chip: "A15 Bionic", Storage: "64GB", Pencil: "2nd gen support", Port: "USB-C" },
+  },
+  {
+    slug: "samsung-galaxy-tab-s8-plus",
+    name: "Samsung Galaxy Tab S8+ (Grey)",
+    brand: "Samsung",
+    category: "tablets",
+    description: "12.4\" Super AMOLED tablet with an included S Pen — a genuine laptop alternative.",
+    mrp: 57900, price: 49900, image: dj("tablets", "samsung-galaxy-tab-s8-plus-grey"),
+    rating: 4.7, numReviews: 1340, stock: 62, featured: false,
+    specs: { Display: "12.4\" Super AMOLED", Chip: "Snapdragon 8 Gen 1", Storage: "128GB", Pen: "S Pen included", Battery: "10090mAh" },
+  },
+  {
+    slug: "samsung-galaxy-tab",
+    name: "Samsung Galaxy Tab (White)",
+    brand: "Samsung",
+    category: "tablets",
+    description: "A crisp, everyday Android tablet for streaming, reading and browsing.",
+    mrp: 33900, price: 28900, image: dj("tablets", "samsung-galaxy-tab-white"),
+    rating: 4.3, numReviews: 980, stock: 92, featured: false,
+    specs: { Display: "10.5\" TFT", RAM: "4GB", Storage: "64GB", Battery: "7040mAh", OS: "Android" },
   },
 
   // Audio
   {
-    slug: "echo-buds-pro",
-    name: "Echo Buds Pro (ANC)",
-    brand: "Echo",
+    slug: "apple-airpods",
+    name: "Apple AirPods (2nd gen)",
+    brand: "Apple",
     category: "audio",
-    description:
-      "Adaptive active noise cancellation, spatial audio and 30 hours of total playback with the charging case.",
-    mrp: 14999,
-    price: 8999,
-    image: img("echo-buds-pro"),
-    rating: 4.4,
-    numReviews: 8123,
-    stock: 120,
-    featured: true,
-    specs: { Type: "In-ear TWS", ANC: "Adaptive", Playback: "30h with case", Water: "IPX4", Codec: "AAC, LDAC" },
-    priceTiers: [
-      { minQty: 5, unitPrice: 8499 },
-      { minQty: 20, unitPrice: 7999 },
-    ],
-    wholesale: { enabled: true, unitPrice: 7299, moq: 20 },
+    description: "Effortless wireless earbuds with the H1 chip, quick pairing and hands-free “Hey Siri”.",
+    mrp: 14900, price: 12900, image: dj("mobile-accessories", "apple-airpods"),
+    rating: 4.6, numReviews: 8123, stock: 67, featured: true,
+    specs: { Type: "In-ear TWS", Chip: "H1", Playback: "24h with case", Charging: "Lightning", Voice: "Hey Siri" },
   },
   {
-    slug: "studio-over-ear-500",
-    name: "Studio Over-Ear 500",
-    brand: "Studio",
+    slug: "apple-airpods-max",
+    name: "Apple AirPods Max (Silver)",
+    brand: "Apple",
     category: "audio",
-    description:
-      "Plush over-ear headphones with 40mm drivers, 40-hour battery and best-in-class noise cancellation for travel.",
-    mrp: 29999,
-    price: 22999,
-    image: img("studio-over-ear-500"),
-    rating: 4.6,
-    numReviews: 3011,
-    stock: 34,
-    featured: false,
-    specs: { Type: "Over-ear", ANC: "Hybrid", Playback: "40h", Drivers: "40mm", Connectivity: "BT 5.3, 3.5mm" },
+    description: "Over-ear headphones with active noise cancellation, spatial audio and a stunning knit-mesh canopy.",
+    mrp: 69900, price: 59900, image: dj("mobile-accessories", "apple-airpods-max-silver"),
+    rating: 4.5, numReviews: 3011, stock: 59, featured: false,
+    specs: { Type: "Over-ear", ANC: "Active", Audio: "Spatial", Playback: "20h", Drivers: "40mm" },
   },
   {
-    slug: "boom-portable-speaker",
-    name: "Boom Portable Speaker",
-    brand: "Boom",
+    slug: "beats-flex",
+    name: "Beats Flex Wireless Earphones",
+    brand: "Beats",
     category: "audio",
-    description:
-      "Rugged, waterproof 360° speaker with punchy bass and 24-hour battery. Pairs two for stereo.",
-    mrp: 9999,
-    price: 6499,
-    image: img("boom-portable-speaker"),
-    rating: 4.3,
-    numReviews: 4520,
-    stock: 78,
-    featured: false,
-    specs: { Output: "30W", Water: "IP67", Playback: "24h", Pairing: "Stereo TWS", Weight: "560g" },
+    description: "All-day wireless earphones with Apple W1, magnetic earbuds and Auto-Play/Pause.",
+    mrp: 5900, price: 4999, image: dj("mobile-accessories", "beats-flex-wireless-earphones"),
+    rating: 4.3, numReviews: 4520, stock: 50, featured: false,
+    specs: { Type: "Neckband", Chip: "Apple W1", Playback: "12h", Charging: "USB-C fast", Magnetic: "Yes" },
+  },
+  {
+    slug: "amazon-echo-plus",
+    name: "Amazon Echo Plus (Smart Speaker)",
+    brand: "Amazon",
+    category: "audio",
+    description: "Room-filling sound with Alexa and a built-in smart-home hub to control your devices.",
+    mrp: 10900, price: 8999, image: dj("mobile-accessories", "amazon-echo-plus"),
+    rating: 4.6, numReviews: 6210, stock: 61, featured: false,
+    specs: { Assistant: "Alexa", Hub: "Zigbee built-in", Audio: "360°", Connectivity: "Wi-Fi, BT", Mics: "7 far-field" },
+  },
+  {
+    slug: "homepod-mini",
+    name: "Apple HomePod mini (Space Grey)",
+    brand: "Apple",
+    category: "audio",
+    description: "Big, room-filling sound from a compact smart speaker with Siri and a smart-home hub.",
+    mrp: 11900, price: 9900, image: dj("mobile-accessories", "apple-homepod-mini-cosmic-grey"),
+    rating: 4.5, numReviews: 2740, stock: 27, featured: false,
+    specs: { Assistant: "Siri", Audio: "360° computational", Hub: "Thread/Matter", Connectivity: "Wi-Fi, BT", Height: "84.3mm" },
   },
 
   // Wearables
   {
-    slug: "pace-watch-2",
-    name: "Pace Watch 2 (GPS)",
-    brand: "Pace",
+    slug: "apple-watch-series-4",
+    name: "Apple Watch Series 4 (GPS, Gold)",
+    brand: "Apple",
     category: "wearables",
-    description:
-      "AMOLED smartwatch with built-in GPS, SpO2, 100+ sport modes and a 14-day battery.",
-    mrp: 19999,
-    price: 14999,
-    image: img("pace-watch-2"),
-    rating: 4.5,
-    numReviews: 6210,
-    stock: 46,
-    featured: true,
-    specs: { Display: "1.43\" AMOLED", GPS: "Built-in", Battery: "Up to 14 days", Water: "5ATM", Sensors: "HR, SpO2, sleep" },
+    description: "Larger edge-to-edge Retina display, ECG and fall detection in a refined stainless design.",
+    mrp: 29900, price: 24900, image: dj("mobile-accessories", "apple-watch-series-4-gold"),
+    rating: 4.5, numReviews: 6210, stock: 33, featured: true,
+    specs: { Display: "Retina LTPO OLED", Health: "ECG, fall detection", GPS: "Built-in", Water: "50m", Battery: "18h" },
   },
   {
-    slug: "fitband-lite",
-    name: "FitBand Lite",
-    brand: "Fit",
+    slug: "longines-master",
+    name: "Longines Master Collection Automatic",
+    brand: "Longines",
     category: "wearables",
-    description:
-      "Slim fitness tracker with heart-rate, sleep tracking and a two-week battery. Your everyday health companion.",
-    mrp: 4999,
-    price: 2999,
-    image: img("fitband-lite"),
-    rating: 4.2,
-    numReviews: 9840,
-    stock: 200,
-    featured: false,
-    specs: { Display: "1.1\" AMOLED", Battery: "14 days", Water: "5ATM", Sensors: "HR, sleep, steps", Weight: "24g" },
-    priceTiers: [
-      { minQty: 10, unitPrice: 2699 },
-      { minQty: 25, unitPrice: 2499 },
-    ],
-    wholesale: { enabled: true, unitPrice: 2199, moq: 25 },
-  },
-
-  // Cameras
-  {
-    slug: "lumina-m50-mirrorless",
-    name: "Lumina M50 Mirrorless (Kit)",
-    brand: "Lumina",
-    category: "cameras",
-    description:
-      "24MP APS-C mirrorless with 4K video, in-body stabilization and a flip-out touchscreen. Ships with 15-45mm lens.",
-    mrp: 74999,
-    price: 62999,
-    image: img("lumina-m50-mirrorless"),
-    rating: 4.7,
-    numReviews: 1180,
-    stock: 18,
-    featured: true,
-    specs: { Sensor: "24MP APS-C", Video: "4K30", Stabilization: "In-body", Screen: "Flip-out touch", Lens: "15-45mm kit" },
+    description: "A Swiss automatic dress watch with a self-winding movement, sapphire crystal and leather strap.",
+    mrp: 219900, price: 189900, image: dj("mens-watches", "longines-master-collection"),
+    rating: 4.6, numReviews: 210, stock: 20, featured: false,
+    specs: { Movement: "Automatic", Crystal: "Sapphire", Case: "Stainless steel", Water: "30m", Strap: "Leather" },
   },
   {
-    slug: "actioncam-go-4k",
-    name: "ActionCam Go 4K",
-    brand: "ActionCam",
-    category: "cameras",
-    description:
-      "Pocket-sized, waterproof action camera with 4K60 recording and rock-steady electronic stabilization.",
-    mrp: 29999,
-    price: 23999,
-    image: img("actioncam-go-4k"),
-    rating: 4.4,
-    numReviews: 2201,
-    stock: 37,
-    featured: false,
-    specs: { Video: "4K60", Stabilization: "Electronic", Water: "10m without case", Screen: "Dual color", Battery: "Swappable" },
-  },
-  {
-    slug: "snap-instant-mini",
-    name: "Snap Instant Mini",
-    brand: "Snap",
-    category: "cameras",
-    description:
-      "Fun instant camera that prints credit-card-sized photos on the spot. Great for parties and gifting.",
-    mrp: 8999,
-    price: 5999,
-    image: img("snap-instant-mini"),
-    rating: 4.3,
-    numReviews: 3670,
-    stock: 64,
-    featured: false,
-    specs: { Film: "Instant mini", Lens: "60mm", Flash: "Auto", Power: "2x AA", Modes: "Selfie mirror" },
+    slug: "brown-leather-watch",
+    name: "Classic Brown Leather Watch",
+    brand: "Timepieces",
+    category: "wearables",
+    description: "A minimalist everyday watch with a clean dial and genuine brown leather strap.",
+    mrp: 5900, price: 3999, image: dj("mens-watches", "brown-leather-belt-watch"),
+    rating: 4.2, numReviews: 640, stock: 32, featured: false,
+    specs: { Movement: "Quartz", Case: "Alloy", Strap: "Leather", Water: "3ATM", Dial: "Analog" },
   },
 
   // Accessories
   {
-    slug: "gan-65w-charger",
-    name: "GaN 65W Fast Charger",
-    brand: "Volt",
+    slug: "iphone-charger",
+    name: "Apple 20W USB-C Power Adapter",
+    brand: "Apple",
     category: "accessories",
-    description:
-      "Compact 3-port GaN charger that powers a laptop, phone and earbuds together. Foldable pins.",
-    mrp: 3999,
-    price: 2499,
-    image: img("gan-65w-charger"),
-    rating: 4.6,
-    numReviews: 5140,
-    stock: 300,
-    featured: false,
-    specs: { Output: "65W", Ports: "2x USB-C, 1x USB-A", Tech: "GaN", Foldable: "Yes", Safety: "Over-current protection" },
-    priceTiers: [
-      { minQty: 10, unitPrice: 2199 },
-      { minQty: 50, unitPrice: 1899 },
-    ],
-    wholesale: { enabled: true, unitPrice: 1599, moq: 50 },
+    description: "Fast, compact USB-C charger — refuel your iPhone or iPad quickly and reliably.",
+    mrp: 2900, price: 1999, image: dj("mobile-accessories", "apple-iphone-charger"),
+    rating: 4.5, numReviews: 5140, stock: 120, featured: false,
+    specs: { Output: "20W", Port: "USB-C", Compatible: "iPhone / iPad", Safety: "Over-current protection" },
   },
   {
-    slug: "braided-usbc-cable",
-    name: "Braided USB-C to USB-C Cable (2m)",
-    brand: "Volt",
+    slug: "magsafe-battery-pack",
+    name: "Apple MagSafe Battery Pack",
+    brand: "Apple",
     category: "accessories",
-    description:
-      "Tough nylon-braided 100W cable rated for 20,000 bends. Supports fast charge and data.",
-    mrp: 1299,
-    price: 699,
-    image: img("braided-usbc-cable"),
-    rating: 4.5,
-    numReviews: 7890,
-    stock: 500,
-    featured: false,
-    specs: { Length: "2m", Power: "100W", Data: "480Mbps", Build: "Nylon braided", Durability: "20,000 bends" },
-    priceTiers: [
-      { minQty: 10, unitPrice: 599 },
-      { minQty: 50, unitPrice: 499 },
-      { minQty: 100, unitPrice: 429 },
-    ],
-    wholesale: { enabled: true, unitPrice: 379, moq: 100 },
+    description: "Snap-on wireless battery that magnetically aligns to give your iPhone extra hours on the go.",
+    mrp: 10900, price: 8900, image: dj("mobile-accessories", "apple-magsafe-battery-pack"),
+    rating: 4.2, numReviews: 3320, stock: 45, featured: false,
+    specs: { Attach: "MagSafe", Charging: "Wireless", Port: "Lightning passthrough", For: "iPhone 12 and later" },
   },
   {
-    slug: "powerbank-20000",
-    name: "PowerBank 20000mAh (22.5W)",
+    slug: "iphone-12-silicone-case",
+    name: "iPhone 12 Silicone Case with MagSafe (Plum)",
+    brand: "Apple",
+    category: "accessories",
+    description: "Soft-touch silicone case with a microfiber lining and built-in MagSafe magnets.",
+    mrp: 3900, price: 2499, image: dj("mobile-accessories", "iphone-12-silicone-case-with-magsafe-plum"),
+    rating: 4.4, numReviews: 2610, stock: 90, featured: false,
+    specs: { Material: "Silicone", MagSafe: "Yes", Lining: "Microfiber", For: "iPhone 12 / 12 Pro" },
+  },
+  {
+    slug: "airpower-wireless-charger",
+    name: "Wireless Charging Pad",
     brand: "Volt",
     category: "accessories",
-    description:
-      "High-capacity power bank with fast charging and a digital battery display. Charges most phones 4+ times.",
-    mrp: 4499,
-    price: 2999,
-    image: img("powerbank-20000"),
-    rating: 4.4,
-    numReviews: 6320,
-    stock: 150,
-    featured: true,
-    specs: { Capacity: "20000mAh", Output: "22.5W", Ports: "USB-C + 2x USB-A", Display: "Digital %", Weight: "360g" },
-    priceTiers: [
-      { minQty: 10, unitPrice: 2699 },
-      { minQty: 50, unitPrice: 2399 },
-    ],
-    wholesale: { enabled: true, unitPrice: 2099, moq: 50 },
+    description: "Flat Qi charging pad — set your phone or earbuds down to charge, no cables to fumble.",
+    mrp: 7900, price: 5900, image: dj("mobile-accessories", "apple-airpower-wireless-charger"),
+    rating: 4.1, numReviews: 1870, stock: 60, featured: false,
+    specs: { Standard: "Qi", Output: "15W", Surface: "Non-slip", Indicator: "LED" },
   },
 ];
 
 /*
- * Bulk-pricing defaults. Every product should be buyable wholesale, but only a
- * handful are hand-tuned above. For the rest we derive sensible volume tiers and
- * a wholesale price from the retail price, using category-appropriate quantities
- * (you buy phones by the ten, cables by the hundred). Hand-tuned products (those
- * that already define priceTiers) are left untouched.
+ * Bulk-pricing defaults — every product should be buyable wholesale, so we derive
+ * sensible volume tiers + a wholesale price from the retail price using
+ * category-appropriate quantities. Hand-tuned products (with priceTiers) and the
+ * NO_BULK set are left untouched.
  */
 const BULK_QTYS: Record<string, [number, number]> = {
   smartphones: [5, 10],
   laptops: [3, 10],
+  tablets: [5, 10],
   audio: [5, 20],
-  wearables: [10, 25],
-  cameras: [3, 10],
+  wearables: [5, 20],
   accessories: [10, 50],
 };
 
-// Halo / limited-stock flagships we deliberately DON'T offer wholesale — keeps
-// the "Bulk & wholesale" filter meaningful (not every SKU qualifies).
-const NO_BULK = new Set(["pulse-fold-z", "workbook-pro-16"]);
+// Halo / limited items we deliberately DON'T offer wholesale.
+const NO_BULK = new Set(["macbook-pro-14", "longines-master"]);
 
 function applyBulkDefaults(p: Product): Product {
   if (p.priceTiers && p.priceTiers.length > 0) return p; // keep hand-tuned
-  if (NO_BULK.has(p.slug)) return p; // retail-only flagship
+  if (NO_BULK.has(p.slug)) return p; // retail-only
   const [a, b] = BULK_QTYS[p.category] ?? [5, 20];
   const round = (n: number) => Math.round(n);
   return {
     ...p,
     priceTiers: [
-      { minQty: a, unitPrice: round(p.price * 0.96) }, // ~4% off
-      { minQty: b, unitPrice: round(p.price * 0.92) }, // ~8% off
+      { minQty: a, unitPrice: round(p.price * 0.96) },
+      { minQty: b, unitPrice: round(p.price * 0.92) },
     ],
-    wholesale: { enabled: true, unitPrice: round(p.price * 0.86), moq: b }, // ~14% off
+    wholesale: { enabled: true, unitPrice: round(p.price * 0.86), moq: b, tiers: [] },
   };
 }
 
-export const products: Product[] = rawProducts.map(applyBulkDefaults);
+/** Stamp each product with its vendor (by slug), or leave it a house product. */
+function applyVendor(p: Product): Product {
+  const vendorSlug = VENDOR_OF[p.slug] ?? "";
+  const vendorName = vendors.find((v) => v.slug === vendorSlug)?.name ?? "";
+  return { ...p, vendorSlug, vendorName };
+}
+
+export const products: Product[] = rawProducts
+  .map(applyBulkDefaults)
+  .map(applyVendor);
 
 export const coupons: Coupon[] = [
-  {
-    code: "SAVE500",
-    type: "flat",
-    value: 500,
-    minSubtotal: 5000,
-    maxDiscount: 0,
-    active: true,
-    description: "₹500 off on orders over ₹5,000",
-  },
-  {
-    code: "SAVE1000",
-    type: "flat",
-    value: 1000,
-    minSubtotal: 10000,
-    maxDiscount: 0,
-    active: true,
-    description: "₹1,000 off on orders over ₹10,000",
-  },
-  {
-    code: "WELCOME10",
-    type: "percent",
-    value: 10,
-    minSubtotal: 2000,
-    maxDiscount: 1500,
-    active: true,
-    description: "10% off (up to ₹1,500) on orders over ₹2,000",
-  },
-  {
-    code: "FLAT200",
-    type: "flat",
-    value: 200,
-    minSubtotal: 1500,
-    maxDiscount: 0,
-    active: true,
-    description: "₹200 off on orders over ₹1,500",
-  },
+  { code: "SAVE500", type: "flat", value: 500, minSubtotal: 5000, maxDiscount: 0, active: true, description: "₹500 off on orders over ₹5,000" },
+  { code: "SAVE1000", type: "flat", value: 1000, minSubtotal: 10000, maxDiscount: 0, active: true, description: "₹1,000 off on orders over ₹10,000" },
+  { code: "WELCOME10", type: "percent", value: 10, minSubtotal: 2000, maxDiscount: 1500, active: true, description: "10% off (up to ₹1,500) on orders over ₹2,000" },
+  { code: "FLAT200", type: "flat", value: 200, minSubtotal: 1500, maxDiscount: 0, active: true, description: "₹200 off on orders over ₹1,500" },
 ];

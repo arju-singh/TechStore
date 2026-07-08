@@ -8,7 +8,12 @@ const LINKS = [
   { href: "/admin/products", label: "Products", exact: false },
   { href: "/admin/pricing", label: "Bulk pricing", exact: false },
   { href: "/admin/orders", label: "Orders", exact: false },
-  { href: "/admin/wholesale", label: "Wholesale", exact: false },
+  { href: "/admin/stores", label: "Stores", exact: false },
+  { href: "/admin/payouts", label: "Payouts", exact: false },
+  { href: "/admin/wholesalers", label: "Wholesalers", exact: false },
+  { href: "/admin/wholesale-orders", label: "Wholesale orders", exact: false },
+  { href: "/admin/wholesale-analytics", label: "Wholesale analytics", exact: false },
+  { href: "/admin/wholesale-settings", label: "Wholesale settings", exact: false },
 ];
 
 export default function AdminNav() {
@@ -27,7 +32,7 @@ export default function AdminNav() {
             className={`block rounded-lg px-3 py-2 text-sm font-medium transition ${
               active
                 ? "bg-brand-50 text-brand-700"
-                : "text-slate-600 hover:bg-slate-100"
+                : "text-white/70 hover:bg-white/10"
             }`}
           >
             {link.label}

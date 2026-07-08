@@ -6,9 +6,12 @@ import { useState } from "react";
 export default function DeleteProductButton({
   slug,
   name,
+  basePath = "/api/admin/products",
 }: {
   slug: string;
   name: string;
+  /** API base for the DELETE — admin or vendor product endpoint. */
+  basePath?: string;
 }) {
   const router = useRouter();
   const [confirming, setConfirming] = useState(false);
@@ -19,7 +22,7 @@ export default function DeleteProductButton({
     setBusy(true);
     setError(null);
     try {
-      const res = await fetch(`/api/admin/products/${slug}`, { method: "DELETE" });
+      const res = await fetch(`${basePath}/${slug}`, { method: "DELETE" });
       if (!res.ok) {
         const d = await res.json().catch(() => ({}));
         throw new Error(d?.error || "Could not delete.");
@@ -45,7 +48,7 @@ export default function DeleteProductButton({
         <button
           onClick={() => setConfirming(false)}
           disabled={busy}
-          className="text-xs font-medium text-slate-500 hover:text-slate-700"
+          className="text-xs font-medium text-white/50 hover:text-white/70"
         >
           Cancel
         </button>

@@ -13,8 +13,8 @@ export default async function NewProductPage() {
       <Link href="/admin/products" className="text-sm font-medium text-brand-600 hover:underline">
         ← Products
       </Link>
-      <h1 className="mb-6 mt-2 text-2xl font-bold text-slate-900">Add product</h1>
-      <div className="rounded-xl border border-slate-200 bg-white p-6">
+      <h1 className="mb-6 mt-2 text-2xl font-bold text-white">Add product</h1>
+      <div className="rounded-xl border border-white/10 bg-white/[0.02] p-6">
         <ProductForm mode="create" categories={categories} />
       </div>
     </div>

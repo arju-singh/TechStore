@@ -8,14 +8,26 @@ export interface PriceTier {
 }
 
 /**
- * Approved-wholesaler contract pricing. Only surfaced to (and only applied for)
- * accounts whose wholesale application has been approved, and only when the line
- * quantity meets the minimum order quantity (`moq`).
+ * One quantity band of B2B wholesale pricing: buyers ordering between `minQty`
+ * and `maxQty` (inclusive; `null` = open-ended) pay `unitPrice` per unit. Set by
+ * the vendor per product, validated against the admin's max-discount cap.
+ */
+export interface WholesaleTier {
+  minQty: number;
+  maxQty: number | null;
+  unitPrice: number;
+}
+
+/**
+ * Approved-wholesaler pricing. Only surfaced to (and only applied for) users who
+ * own an APPROVED wholesaler profile. `tiers` are the quantity bands (the modern
+ * model); `unitPrice`/`moq` remain for the legacy single-rate contract price.
  */
 export interface WholesaleConfig {
   enabled: boolean;
   unitPrice: number;
   moq: number;
+  tiers?: WholesaleTier[];
 }
 
 export interface Product {
@@ -40,17 +52,54 @@ export interface Product {
   wholesale?: WholesaleConfig;
   /** GST rate (%) applied to this product. Prices are GST-inclusive. Default 18. */
   gstRate?: number;
+  /**
+   * Slug of the third-party vendor selling this product. "" (or absent) means
+   * the item is sold directly by TechStore (a "house" product). This slug is the
+   * stable link to a Vendor across the seed, in-memory, and Mongo data paths.
+   */
+  vendorSlug?: string;
+  /** Denormalized vendor display name, for cheap "Sold by ⟨store⟩" rendering. */
+  vendorName?: string;
 }
-
-/** Retail shopper vs approved wholesale buyer. */
-export type AccountType = "retail" | "wholesale";
-
-/** Lifecycle of a wholesale application. */
-export type WholesaleStatus = "none" | "pending" | "approved" | "rejected";
 
 export interface Category {
   slug: string;
   name: string;
   tagline: string;
   image: string;
+}
+
+/** Lifecycle of a marketplace vendor, governed by an admin. */
+export type VendorStatus = "pending" | "approved" | "suspended" | "rejected";
+
+export interface VendorAddress {
+  line1: string;
+  line2: string;
+  city: string;
+  state: string;
+  pincode: string;
+}
+
+/**
+ * A marketplace vendor (third-party seller). Plain shape shared by the data
+ * layer, seed, and UI. There are no secrets on a vendor, so this is also the
+ * public shape sent to clients.
+ */
+export interface Vendor {
+  id: string;
+  slug: string;
+  name: string;
+  /** The user who owns/operates this store. */
+  ownerUserId: string;
+  email: string;
+  phone: string;
+  description: string;
+  logo: string;
+  status: VendorStatus;
+  /** Commission % override; null → platform default (PLATFORM_COMMISSION_RATE). */
+  commissionRate: number | null;
+  gstin: string;
+  address: VendorAddress;
+  policies: string;
+  createdAt: string;
 }

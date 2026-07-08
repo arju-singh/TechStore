@@ -75,13 +75,13 @@ export default function VolumePricing({
   }
 
   return (
-    <div className="rounded-lg border border-slate-200 bg-slate-50/70 p-3">
+    <div className="rounded-lg border border-white/10 bg-white/5/70 p-3">
       <div className="mb-2 flex items-center justify-between">
-        <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+        <span className="text-xs font-semibold uppercase tracking-wide text-white/50">
           Buy more, save more
         </span>
         {!isWholesaler && hasWholesale && (
-          <Link href="/business" className="text-xs font-semibold text-blue-700 hover:underline">
+          <Link href="/become-a-wholesaler" className="text-xs font-semibold text-blue-700 hover:underline">
             For Business →
           </Link>
         )}
@@ -92,7 +92,7 @@ export default function VolumePricing({
             <tr
               key={r.key}
               className={`${
-                r.active ? "font-semibold text-slate-900" : "text-slate-600"
+                r.active ? "font-semibold text-white" : "text-white/70"
               }`}
             >
               <td className="py-1">
@@ -117,10 +117,10 @@ export default function VolumePricing({
                 </span>
               </td>
               <td className="py-1 text-right tabular-nums">
-                <span className={r.locked ? "text-slate-400" : ""}>
+                <span className={r.locked ? "text-white/40" : ""}>
                   {formatINR(r.unit)}
                 </span>
-                <span className="text-xs text-slate-400"> /unit</span>
+                <span className="text-xs text-white/40"> /unit</span>
               </td>
             </tr>
           ))}

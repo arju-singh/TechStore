@@ -10,7 +10,9 @@ import mongoose from "mongoose";
 import ProductModel from "../lib/models/Product";
 import CategoryModel from "../lib/models/Category";
 import CouponModel from "../lib/models/Coupon";
-import { products, categories, coupons } from "../data/seed";
+import VendorModel from "../lib/models/Vendor";
+import PayoutModel from "../lib/models/Payout";
+import { products, categories, coupons, vendors } from "../data/seed";
 
 // Minimal .env.local loader so we don't need an extra dependency.
 function loadEnvLocal() {
@@ -41,10 +43,12 @@ async function main() {
   console.log("→ Connecting to MongoDB…");
   await mongoose.connect(uri);
 
-  console.log("→ Clearing existing products, categories & coupons…");
+  console.log("→ Clearing existing products, categories, coupons, vendors & payouts…");
   await ProductModel.deleteMany({});
   await CategoryModel.deleteMany({});
   await CouponModel.deleteMany({});
+  await VendorModel.deleteMany({});
+  await PayoutModel.deleteMany({});
 
   console.log(`→ Inserting ${categories.length} categories…`);
   await CategoryModel.insertMany(categories);
@@ -54,6 +58,12 @@ async function main() {
 
   console.log(`→ Inserting ${coupons.length} coupons…`);
   await CouponModel.insertMany(coupons);
+
+  // Strip the seed-only `id`/`createdAt` so Mongo assigns its own _id + timestamps.
+  // Products link to vendors by slug, so these ids never need to match the seed.
+  const vendorDocs = vendors.map(({ id, createdAt, ...rest }) => rest);
+  console.log(`→ Inserting ${vendorDocs.length} vendors…`);
+  await VendorModel.insertMany(vendorDocs);
 
   console.log("\n✔ Seed complete.\n");
   await mongoose.disconnect();

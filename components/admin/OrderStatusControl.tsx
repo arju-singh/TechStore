@@ -56,8 +56,8 @@ export default function OrderStatusControl({
         value={value}
         onChange={onChange}
         disabled={busy}
-        className={`rounded-md border px-2 py-1 text-xs font-medium capitalize outline-none focus:ring-2 focus:ring-brand-100 ${
-          error ? "border-red-300" : "border-slate-200"
+        className={`rounded-md border bg-white/5 px-2 py-1 text-xs font-medium capitalize text-white outline-none focus:ring-2 focus:ring-brand-100 ${
+          error ? "border-red-400" : "border-white/15"
         }`}
       >
         {STATUSES.map((s) => (

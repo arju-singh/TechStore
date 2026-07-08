@@ -7,7 +7,8 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "seed": "tsx scripts/seed.ts"
+    "seed": "tsx scripts/seed.ts",
+    "migrate:wholesale": "tsx scripts/migrate-wholesale.ts"
   },
   "dependencies": {
     "bcryptjs": "^3.0.3",

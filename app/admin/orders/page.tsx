@@ -19,20 +19,20 @@ export default async function AdminOrdersPage() {
   return (
     <div>
       <div className="mb-6">
-        <h1 className="text-2xl font-bold text-slate-900">Orders</h1>
-        <p className="mt-1 text-sm text-slate-500">{orders.length} orders</p>
+        <h1 className="text-2xl font-bold text-white">Orders</h1>
+        <p className="mt-1 text-sm text-white/50">{orders.length} orders</p>
       </div>
 
       {orders.length === 0 ? (
-        <div className="rounded-xl border border-dashed border-slate-300 bg-white p-12 text-center text-sm text-slate-500">
+        <div className="rounded-xl border border-dashed border-white/15 bg-white/[0.02] p-12 text-center text-sm text-white/50">
           No orders yet.
         </div>
       ) : (
-        <div className="overflow-hidden rounded-xl border border-slate-200 bg-white">
+        <div className="overflow-hidden rounded-xl border border-white/10 bg-white/[0.02]">
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
-                <tr className="border-b border-slate-100 bg-slate-50 text-left text-xs uppercase tracking-wide text-slate-500">
+                <tr className="border-b border-white/10 bg-white/5 text-left text-xs uppercase tracking-wide text-white/50">
                   <th className="px-4 py-3 font-semibold">Order</th>
                   <th className="px-4 py-3 font-semibold">Customer</th>
                   <th className="px-4 py-3 font-semibold">Date</th>
@@ -41,28 +41,28 @@ export default async function AdminOrdersPage() {
                   <th className="px-4 py-3 font-semibold">Status</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-100">
+              <tbody className="divide-y divide-white/10">
                 {orders.map((o) => {
                   const itemCount = o.items.reduce((n, i) => n + i.qty, 0);
                   return (
-                    <tr key={o.id} className="hover:bg-slate-50">
+                    <tr key={o.id} className="hover:bg-white/5">
                       <td className="px-4 py-3">
-                        <div className="font-medium text-slate-800">#{o.id.slice(-8)}</div>
-                        <div className="text-xs text-slate-400">
+                        <div className="font-medium text-white/80">#{o.id.slice(-8)}</div>
+                        <div className="text-xs text-white/40">
                           {itemCount} {itemCount === 1 ? "item" : "items"}
                         </div>
                       </td>
                       <td className="px-4 py-3">
-                        <div className="text-slate-700">{o.address.fullName}</div>
-                        <div className="text-xs text-slate-400">
+                        <div className="text-white/70">{o.address.fullName}</div>
+                        <div className="text-xs text-white/40">
                           {o.address.city}, {o.address.pincode}
                         </div>
                       </td>
-                      <td className="px-4 py-3 text-slate-600">{formatDate(o.createdAt)}</td>
-                      <td className="px-4 py-3 capitalize text-slate-600">
+                      <td className="px-4 py-3 text-white/70">{formatDate(o.createdAt)}</td>
+                      <td className="px-4 py-3 capitalize text-white/70">
                         {o.paymentMethod === "razorpay" ? "Online" : "COD"}
                       </td>
-                      <td className="px-4 py-3 font-semibold text-slate-800">
+                      <td className="px-4 py-3 font-semibold text-white/80">
                         {formatINR(o.total)}
                       </td>
                       <td className="px-4 py-3">

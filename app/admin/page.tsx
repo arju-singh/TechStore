@@ -17,8 +17,8 @@ export default async function AdminDashboard() {
 
   return (
     <div>
-      <h1 className="text-2xl font-bold text-slate-900">Dashboard</h1>
-      <p className="mt-1 text-sm text-slate-500">Overview of your store.</p>
+      <h1 className="text-2xl font-bold text-white">Dashboard</h1>
+      <p className="mt-1 text-sm text-white/50">Overview of your store.</p>
 
       <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <Stat label="Products" value={String(products.length)} href="/admin/products" />
@@ -28,9 +28,9 @@ export default async function AdminDashboard() {
       </div>
 
       <div className="mt-6 grid gap-4 sm:grid-cols-2">
-        <div className="rounded-xl border border-slate-200 bg-white p-5">
-          <h2 className="font-semibold text-slate-900">Inventory alerts</h2>
-          <ul className="mt-3 space-y-1.5 text-sm text-slate-600">
+        <div className="rounded-xl border border-white/10 bg-white/[0.02] p-5">
+          <h2 className="font-semibold text-white">Inventory alerts</h2>
+          <ul className="mt-3 space-y-1.5 text-sm text-white/70">
             <li className="flex justify-between">
               <span>Low stock (≤ 10)</span>
               <span className="font-semibold text-amber-600">{lowStock}</span>
@@ -48,8 +48,8 @@ export default async function AdminDashboard() {
           </Link>
         </div>
 
-        <div className="rounded-xl border border-slate-200 bg-white p-5">
-          <h2 className="font-semibold text-slate-900">Quick actions</h2>
+        <div className="rounded-xl border border-white/10 bg-white/[0.02] p-5">
+          <h2 className="font-semibold text-white">Quick actions</h2>
           <div className="mt-3 flex flex-wrap gap-2">
             <Link
               href="/admin/products/new"
@@ -59,7 +59,7 @@ export default async function AdminDashboard() {
             </Link>
             <Link
               href="/admin/orders"
-              className="rounded-lg border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50"
+              className="rounded-lg border border-white/10 px-4 py-2 text-sm font-semibold text-white/70 hover:bg-white/5"
             >
               View orders
             </Link>
@@ -82,10 +82,10 @@ function Stat({
   href?: string;
 }) {
   const inner = (
-    <div className="rounded-xl border border-slate-200 bg-white p-5 transition hover:border-brand-300">
-      <div className="text-sm text-slate-500">{label}</div>
-      <div className="mt-1 text-2xl font-bold text-slate-900">{value}</div>
-      {sub && <div className="text-xs text-slate-400">{sub}</div>}
+    <div className="rounded-xl border border-white/10 bg-white/[0.02] p-5 transition hover:border-brand-300">
+      <div className="text-sm text-white/50">{label}</div>
+      <div className="mt-1 text-2xl font-bold text-white">{value}</div>
+      {sub && <div className="text-xs text-white/40">{sub}</div>}
     </div>
   );
   return href ? <Link href={href}>{inner}</Link> : inner;

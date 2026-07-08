@@ -1,6 +1,8 @@
 import { hasDatabase, connectToDatabase } from "@/lib/mongodb";
 import OrderModel from "@/lib/models/Order";
 
+export type FulfillmentStatus = "pending" | "shipped" | "delivered";
+
 export interface OrderItem {
   slug: string;
   name: string;
@@ -11,6 +13,13 @@ export interface OrderItem {
   qty: number;
   /** GST rate (%) snapshot for the tax invoice. Prices are GST-inclusive. */
   gstRate?: number;
+  /** Marketplace: vendor selling this line. "" = house (sold by TechStore). */
+  vendorSlug?: string;
+  vendorName?: string;
+  /** Commission % snapshot at purchase time, for stable payout accounting. */
+  commissionRate?: number;
+  /** Per-line fulfillment progress, advanced by the vendor. */
+  fulfillmentStatus?: FulfillmentStatus;
 }
 
 export interface OrderAddress {
@@ -54,6 +63,8 @@ export interface Order {
   creditDueDate: string;
   quotedTotal: number;
   quoteNote: string;
+  /** Retail (B2C) vs wholesale (B2B) order. */
+  orderType: "retail" | "wholesale";
   createdAt: string;
 }
 
@@ -72,6 +83,7 @@ export interface NewOrderInput {
   razorpayOrderId?: string;
   poNumber?: string;
   creditDueDate?: string;
+  orderType?: "retail" | "wholesale";
 }
 
 /*
@@ -111,6 +123,7 @@ function docToOrder(doc: any): Order {
     creditDueDate: doc.creditDueDate ?? "",
     quotedTotal: doc.quotedTotal ?? 0,
     quoteNote: doc.quoteNote ?? "",
+    orderType: doc.orderType === "wholesale" ? "wholesale" : "retail",
     createdAt:
       doc.createdAt instanceof Date
         ? doc.createdAt.toISOString()
@@ -134,6 +147,7 @@ export async function createOrder(
       creditDueDate: input.creditDueDate ?? "",
       quotedTotal: 0,
       quoteNote: "",
+      orderType: input.orderType ?? "retail",
       createdAt: createdAtISO,
     };
     memOrders.unshift(order);
@@ -268,4 +282,112 @@ export async function getOrderById(id: string): Promise<Order | null> {
     .lean()
     .catch(() => null);
   return doc ? docToOrder(doc) : null;
+}
+
+// ---------------------------------------------------------------------------
+// Marketplace: per-vendor views of the single, vendor-tagged order
+// ---------------------------------------------------------------------------
+
+export interface VendorOrderGroup {
+  vendorSlug: string;
+  vendorName: string;
+  items: OrderItem[];
+  /** Sum of this vendor's line totals (price × qty). */
+  subtotal: number;
+}
+
+/** Group one order's items by vendor (house items land under vendorSlug ""). */
+export function splitOrderByVendor(order: Order): VendorOrderGroup[] {
+  const groups = new Map<string, VendorOrderGroup>();
+  for (const item of order.items) {
+    const slug = item.vendorSlug ?? "";
+    const g =
+      groups.get(slug) ??
+      { vendorSlug: slug, vendorName: item.vendorName ?? "", items: [], subtotal: 0 };
+    g.items.push(item);
+    g.subtotal += item.price * item.qty;
+    groups.set(slug, g);
+  }
+  return [...groups.values()];
+}
+
+/** A single vendor's slice of an order — only their lines, for the vendor portal. */
+export interface VendorOrder {
+  id: string;
+  createdAt: string;
+  status: OrderStatus;
+  address: OrderAddress;
+  items: OrderItem[];
+  vendorSubtotal: number;
+  orderType: "retail" | "wholesale";
+  /** Aggregate of the vendor's line fulfillments: a shared value, or "mixed". */
+  fulfillment: FulfillmentStatus | "mixed";
+}
+
+function toVendorOrder(order: Order, vendorSlug: string): VendorOrder {
+  const items = order.items.filter((i) => (i.vendorSlug ?? "") === vendorSlug);
+  const statuses = new Set(items.map((i) => i.fulfillmentStatus ?? "pending"));
+  const fulfillment: FulfillmentStatus | "mixed" =
+    statuses.size === 1 ? ([...statuses][0] as FulfillmentStatus) : "mixed";
+  return {
+    id: order.id,
+    createdAt: order.createdAt,
+    status: order.status,
+    address: order.address,
+    items,
+    vendorSubtotal: items.reduce((s, i) => s + i.price * i.qty, 0),
+    orderType: order.orderType,
+    fulfillment,
+  };
+}
+
+/** Every order containing at least one of a vendor's lines, projected to those lines. */
+export async function getOrdersForVendor(vendorSlug: string): Promise<VendorOrder[]> {
+  if (!vendorSlug) return [];
+  let source: Order[];
+  if (!hasDatabase) {
+    source = memOrders;
+  } else {
+    await connectToDatabase();
+    const docs = await OrderModel.find({ "items.vendorSlug": vendorSlug })
+      .sort({ createdAt: -1 })
+      .lean();
+    source = docs.map(docToOrder);
+  }
+  return source
+    .filter((o) => o.items.some((i) => (i.vendorSlug ?? "") === vendorSlug))
+    .map((o) => toVendorOrder(o, vendorSlug));
+}
+
+/**
+ * Advance the fulfillment status of every line a vendor owns in an order. Scoped
+ * to `vendorSlug` so a vendor can only ever touch their own lines — the caller
+ * passes the authenticated vendor's slug.
+ */
+export async function updateVendorItemFulfillment(
+  orderId: string,
+  vendorSlug: string,
+  status: FulfillmentStatus
+): Promise<Order | null> {
+  if (!vendorSlug) return null;
+  if (!hasDatabase) {
+    const order = memOrders.find((o) => o.id === orderId);
+    if (!order) return null;
+    let touched = false;
+    for (const item of order.items) {
+      if ((item.vendorSlug ?? "") === vendorSlug) {
+        item.fulfillmentStatus = status;
+        touched = true;
+      }
+    }
+    return touched ? order : null;
+  }
+  await connectToDatabase();
+  const res = await OrderModel.updateOne(
+    { _id: orderId, "items.vendorSlug": vendorSlug },
+    { $set: { "items.$[e].fulfillmentStatus": status } },
+    { arrayFilters: [{ "e.vendorSlug": vendorSlug }] }
+  ).catch(() => null);
+  if (!res || res.matchedCount === 0) return null;
+  return getOrderById(orderId);
 }

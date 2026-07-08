@@ -9,6 +9,9 @@ import {
   toPublicUser,
 } from "@/lib/users";
 import { isAdminEmail } from "@/lib/admin";
+import { hasDatabase } from "@/lib/mongodb";
+import { getVendorByOwner, type Vendor } from "@/lib/vendors";
+import { getWholesalerByUser, type WholesalerProfile } from "@/lib/wholesalers";
 
 const COOKIE_NAME = "techstore_session";
 const SESSION_DAYS = 7;
@@ -85,6 +88,29 @@ export function publicUserWithRole(user: StoredUser): PublicUser {
   return publicUser;
 }
 
+/**
+ * Public user + role + live wholesaler status. `isWholesaler`/`membershipTier`
+ * are derived from the user's approved WholesalerProfile, re-read fresh (never
+ * trusted from the JWT). With no database there are no wholesalers, so it stays
+ * false — the retail auth path keeps working without a DB. Used by getCurrentUser
+ * and the login/me routes so client and server agree on wholesaler status.
+ */
+export async function enrichPublicUser(user: StoredUser): Promise<PublicUser> {
+  const publicUser = publicUserWithRole(user);
+  if (hasDatabase) {
+    try {
+      const profile = await getWholesalerByUser(publicUser.id);
+      if (profile) {
+        publicUser.isWholesaler = profile.status === "approved";
+        publicUser.membershipTier = profile.membershipTier;
+      }
+    } catch {
+      // A wholesaler lookup failure must never break authentication.
+    }
+  }
+  return publicUser;
+}
+
 /** Resolve the currently authenticated user from the session cookie, or null. */
 export async function getCurrentUser(): Promise<PublicUser | null> {
   const store = await cookies();
@@ -97,7 +123,7 @@ export async function getCurrentUser(): Promise<PublicUser | null> {
     if (!id) return null;
     const user = await findUserById(id);
     if (!user) return null;
-    return publicUserWithRole(user);
+    return enrichPublicUser(user);
   } catch {
     return null; // expired / tampered / invalid
   }
@@ -109,10 +135,64 @@ export async function getAdminUser(): Promise<PublicUser | null> {
   return user && user.role === "admin" ? user : null;
 }
 
-/** Return the current user only if they are an approved wholesaler, else null. */
-export async function getWholesaleUser(): Promise<PublicUser | null> {
+/**
+ * The current user's wholesaler context, resolved fresh from the session owner
+ * each request. `profile` is the wholesaler they own regardless of status, so a
+ * layout can branch on pending / approved / rejected / suspended. DB-only: with
+ * no database there are no profiles, so profile is null.
+ */
+export async function getWholesalerContext(): Promise<{
+  user: PublicUser | null;
+  profile: WholesalerProfile | null;
+}> {
   const user = await getCurrentUser();
-  return user && user.isWholesaler ? user : null;
+  if (!user || !hasDatabase) return { user: user ?? null, profile: null };
+  const profile = await getWholesalerByUser(user.id);
+  return { user, profile };
+}
+
+/**
+ * Return the current user together with their wholesaler profile ONLY when it is
+ * APPROVED. The authoritative gate for wholesale-portal data and writes — a
+ * pending/rejected/suspended/blacklisted wholesaler gets null.
+ */
+export async function getWholesalerUser(): Promise<{
+  user: PublicUser;
+  profile: WholesalerProfile;
+} | null> {
+  const { user, profile } = await getWholesalerContext();
+  if (!user || !profile || profile.status !== "approved") return null;
+  return { user, profile };
+}
+
+/**
+ * The current user's vendor context, resolved fresh from the session owner each
+ * request (never trusted from the JWT — mirrors how wholesaler status is
+ * re-derived). `vendor` is the store they own regardless of its status, so a
+ * layout can branch on pending / approved / suspended.
+ */
+export async function getVendorContext(): Promise<{
+  user: PublicUser | null;
+  vendor: Vendor | null;
+}> {
+  const user = await getCurrentUser();
+  if (!user) return { user: null, vendor: null };
+  const vendor = await getVendorByOwner(user.id);
+  return { user, vendor };
+}
+
+/**
+ * Return the current user together with their vendor ONLY when that vendor is
+ * approved. The authoritative gate for vendor-portal writes and data access —
+ * a pending/suspended/rejected vendor gets null.
+ */
+export async function getVendorUser(): Promise<{
+  user: PublicUser;
+  vendor: Vendor;
+} | null> {
+  const { user, vendor } = await getVendorContext();
+  if (!user || !vendor || vendor.status !== "approved") return null;
+  return { user, vendor };
 }
 
 /**

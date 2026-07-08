@@ -19,8 +19,8 @@ export default async function AdminLayout({
   if (user.role !== "admin") {
     return (
       <div className="mx-auto max-w-lg px-4 py-24 text-center">
-        <h1 className="text-2xl font-bold text-slate-900">Access denied</h1>
-        <p className="mt-2 text-sm text-slate-500">
+        <h1 className="text-2xl font-bold text-white">Access denied</h1>
+        <p className="mt-2 text-sm text-white/50">
           You're signed in as {user.email}, which doesn't have admin access. Ask
           an administrator to add your email to <code>ADMIN_EMAILS</code>.
         </p>
@@ -42,7 +42,7 @@ export default async function AdminLayout({
             <span className="rounded-md bg-slate-900 px-2 py-1 text-xs font-bold uppercase tracking-wide text-white">
               Admin
             </span>
-            <span className="text-sm text-slate-400">TechStore</span>
+            <span className="text-sm text-white/40">TechStore</span>
           </div>
           <AdminNav />
           <Link

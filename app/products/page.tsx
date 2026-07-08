@@ -7,6 +7,7 @@ import {
   PRICE_RANGES,
   type SortKey,
 } from "@/lib/products";
+import { getApprovedVendors } from "@/lib/vendors";
 import ProductCard from "@/components/ProductCard";
 import SortSelect from "@/components/SortSelect";
 
@@ -21,6 +22,7 @@ type SearchParams = {
   minPrice?: string;
   maxPrice?: string;
   bulk?: string;
+  vendor?: string;
 };
 
 interface Filters {
@@ -30,6 +32,7 @@ interface Filters {
   minPrice?: number;
   maxPrice?: number;
   bulk?: boolean;
+  vendor?: string;
 }
 
 export default async function ProductsPage({
@@ -44,25 +47,30 @@ export default async function ProductsPage({
   const minPrice = sp.minPrice ? Number(sp.minPrice) : undefined;
   const maxPrice = sp.maxPrice ? Number(sp.maxPrice) : undefined;
   const bulk = sp.bulk === "1";
+  const vendor = sp.vendor;
 
-  const [products, categories, counts] = await Promise.all([
-    getProducts({ category, search, sort, minPrice, maxPrice, bulk }),
+  const [products, categories, counts, vendors] = await Promise.all([
+    getProducts({ category, search, sort, minPrice, maxPrice, bulk, vendor }),
     getCategories(),
     getCategoryCounts(),
+    getApprovedVendors(),
   ]);
 
   const activeCategory = categories.find((c) => c.slug === category);
+  const activeVendor = vendors.find((v) => v.slug === vendor);
   const activeRange = PRICE_RANGES.find(
     (r) => r.minPrice === minPrice && r.maxPrice === maxPrice
   );
   const heading = search
     ? `Results for “${search}”`
+    : activeVendor
+    ? activeVendor.name
     : activeCategory
     ? activeCategory.name
     : "All products";
 
   const totalCount = Object.values(counts).reduce((a, b) => a + b, 0);
-  const base: Filters = { category, search, sort, minPrice, maxPrice, bulk };
+  const base: Filters = { category, search, sort, minPrice, maxPrice, bulk, vendor };
 
   return (
     <div className="mx-auto max-w-[1500px] px-4 py-6 sm:px-6">
@@ -81,7 +89,7 @@ export default async function ProductsPage({
       <div className="flex flex-col gap-6 lg:flex-row">
         {/* Sidebar filters */}
         <aside className="lg:w-56 lg:shrink-0">
-          <div className="rounded-lg bg-white p-4 shadow-soft">
+          <div className="rounded-2xl border border-white/10 bg-white/[0.02] p-4">
             <h2 className="mb-2 text-sm font-bold text-ink">Category</h2>
             <ul className="space-y-0.5">
               <FilterLink
@@ -100,6 +108,27 @@ export default async function ProductsPage({
                 />
               ))}
             </ul>
+
+            {vendors.length > 0 && (
+              <>
+                <h2 className="mb-2 mt-5 text-sm font-bold text-ink">Store</h2>
+                <ul className="space-y-0.5">
+                  <FilterLink
+                    href={buildHref({ ...base, vendor: undefined })}
+                    label="All stores"
+                    active={!vendor}
+                  />
+                  {vendors.map((v) => (
+                    <FilterLink
+                      key={v.slug}
+                      href={buildHref({ ...base, vendor: v.slug })}
+                      label={v.name}
+                      active={vendor === v.slug}
+                    />
+                  ))}
+                </ul>
+              </>
+            )}
 
             <h2 className="mb-2 mt-5 text-sm font-bold text-ink">Price</h2>
             <ul className="space-y-0.5">
@@ -129,7 +158,7 @@ export default async function ProductsPage({
             >
               <span
                 className={`flex h-4 w-4 items-center justify-center rounded border ${
-                  bulk ? "border-blue-600 bg-blue-600 text-white" : "border-slate-300"
+                  bulk ? "border-blue-600 bg-blue-600 text-white" : "border-white/15"
                 }`}
               >
                 {bulk && (
@@ -146,7 +175,7 @@ export default async function ProductsPage({
         {/* Grid */}
         <div className="flex-1">
           {products.length === 0 ? (
-            <div className="rounded-lg bg-white p-12 text-center shadow-soft">
+            <div className="rounded-2xl border border-white/10 bg-white/[0.02] p-12 text-center">
               <p className="text-lg font-bold text-ink">No products found</p>
               <p className="mt-1 text-sm text-amz-borderdark">
                 Try a different filter or browse all products.
@@ -156,7 +185,7 @@ export default async function ProductsPage({
               </Link>
             </div>
           ) : (
-            <div className="grid grid-cols-2 gap-2 rounded-lg bg-white p-3 shadow-soft sm:grid-cols-3 xl:grid-cols-4">
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-4">
               {products.map((p) => (
                 <ProductCard key={p.slug} product={p} />
               ))}
@@ -176,6 +205,7 @@ function buildHref(f: Filters): string {
   if (typeof f.minPrice === "number") sp.set("minPrice", String(f.minPrice));
   if (typeof f.maxPrice === "number") sp.set("maxPrice", String(f.maxPrice));
   if (f.bulk) sp.set("bulk", "1");
+  if (f.vendor) sp.set("vendor", f.vendor);
   const qs = sp.toString();
   return qs ? `/products?${qs}` : "/products";
 }

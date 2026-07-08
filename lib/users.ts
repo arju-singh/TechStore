@@ -1,14 +1,7 @@
 import { hasDatabase, connectToDatabase } from "@/lib/mongodb";
 import UserModel from "@/lib/models/User";
-import type { AccountType, WholesaleStatus } from "@/lib/types";
 
 export type UserRole = "customer" | "admin";
-
-export interface BusinessInfo {
-  companyName: string;
-  gstin: string;
-  businessPhone: string;
-}
 
 export interface StoredUser {
   id: string;
@@ -16,33 +9,22 @@ export interface StoredUser {
   email: string;
   passwordHash: string;
   role: UserRole;
-  accountType: AccountType;
-  wholesaleStatus: WholesaleStatus;
-  companyName: string;
-  gstin: string;
-  businessPhone: string;
 }
 
-/** Public shape returned to clients — never includes the password hash. */
+/**
+ * Public shape returned to clients — never includes the password hash.
+ * `isWholesaler` / `membershipTier` reflect the user's approved WholesalerProfile
+ * (a distinct role); they are populated by `enrichPublicUser` in lib/auth.ts, not
+ * stored on the user account. `toPublicUser` alone leaves them at their defaults.
+ */
 export interface PublicUser {
   id: string;
   name: string;
   email: string;
   role: UserRole;
-  accountType: AccountType;
-  wholesaleStatus: WholesaleStatus;
-  /** True only when the buyer is an approved wholesaler. The single flag callers gate on. */
+  /** True only when the user owns an APPROVED wholesaler profile. */
   isWholesaler: boolean;
-  companyName: string;
-  gstin: string;
-  businessPhone: string;
-}
-
-export function isApprovedWholesaler(u: {
-  accountType: AccountType;
-  wholesaleStatus: WholesaleStatus;
-}): boolean {
-  return u.accountType === "wholesale" && u.wholesaleStatus === "approved";
+  membershipTier: string;
 }
 
 export function toPublicUser(u: StoredUser): PublicUser {
@@ -51,16 +33,11 @@ export function toPublicUser(u: StoredUser): PublicUser {
     name: u.name,
     email: u.email,
     role: u.role,
-    accountType: u.accountType,
-    wholesaleStatus: u.wholesaleStatus,
-    isWholesaler: isApprovedWholesaler(u),
-    companyName: u.companyName,
-    gstin: u.gstin,
-    businessPhone: u.businessPhone,
+    isWholesaler: false,
+    membershipTier: "none",
   };
 }
 
-/** Map a Mongo user doc to StoredUser, defaulting the newer account fields. */
 function docToStoredUser(doc: any): StoredUser {
   return {
     id: String(doc._id),
@@ -68,11 +45,6 @@ function docToStoredUser(doc: any): StoredUser {
     email: doc.email,
     passwordHash: doc.passwordHash,
     role: doc.role,
-    accountType: doc.accountType ?? "retail",
-    wholesaleStatus: doc.wholesaleStatus ?? "none",
-    companyName: doc.companyName ?? "",
-    gstin: doc.gstin ?? "",
-    businessPhone: doc.businessPhone ?? "",
   };
 }
 
@@ -137,11 +109,6 @@ export async function createUser(input: {
       email,
       passwordHash: input.passwordHash,
       role,
-      accountType: "retail",
-      wholesaleStatus: "none",
-      companyName: "",
-      gstin: "",
-      businessPhone: "",
     };
     memUsers.set(email, user);
     return user;
@@ -157,87 +124,8 @@ export async function createUser(input: {
   return docToStoredUser(doc.toObject());
 }
 
-/**
- * Find a stored user by id in the in-memory map (used by mutations that need to
- * write back to the same object reference).
- */
-function memUserById(id: string): StoredUser | null {
-  for (const u of memUsers.values()) if (u.id === id) return u;
-  return null;
-}
-
-/**
- * Record a wholesale application: captures business details and moves the user
- * to accountType "wholesale" with status "pending" (awaiting admin approval).
- */
-export async function applyForWholesale(
-  userId: string,
-  business: BusinessInfo
-): Promise<StoredUser | null> {
-  if (!hasDatabase) {
-    const user = memUserById(userId);
-    if (!user) return null;
-    user.accountType = "wholesale";
-    user.wholesaleStatus = "pending";
-    user.companyName = business.companyName;
-    user.gstin = business.gstin;
-    user.businessPhone = business.businessPhone;
-    return user;
-  }
-  await connectToDatabase();
-  const doc = await UserModel.findByIdAndUpdate(
-    userId,
-    {
-      accountType: "wholesale",
-      wholesaleStatus: "pending",
-      companyName: business.companyName,
-      gstin: business.gstin,
-      businessPhone: business.businessPhone,
-    },
-    { new: true }
-  )
-    .lean<any>()
-    .catch(() => null);
-  return doc ? docToStoredUser(doc) : null;
-}
-
-/** Admin: approve/reject a wholesale application (or reset it). */
-export async function setWholesaleStatus(
-  userId: string,
-  status: WholesaleStatus
-): Promise<StoredUser | null> {
-  // A rejected/reset applicant reverts to a retail account.
-  const accountType: AccountType = status === "approved" ? "wholesale" : "retail";
-  if (!hasDatabase) {
-    const user = memUserById(userId);
-    if (!user) return null;
-    user.wholesaleStatus = status;
-    user.accountType = accountType;
-    return user;
-  }
-  await connectToDatabase();
-  const doc = await UserModel.findByIdAndUpdate(
-    userId,
-    { wholesaleStatus: status, accountType },
-    { new: true }
-  )
-    .lean<any>()
-    .catch(() => null);
-  return doc ? docToStoredUser(doc) : null;
-}
-
-/** Admin: list all users who have a wholesale application on file. */
-export async function listWholesaleApplicants(): Promise<PublicUser[]> {
-  if (!hasDatabase) {
-    return [...memUsers.values()]
-      .filter((u) => u.wholesaleStatus !== "none")
-      .map(toPublicUser);
-  }
-  await connectToDatabase();
-  const docs = await UserModel.find({
-    wholesaleStatus: { $in: ["pending", "approved", "rejected"] },
-  })
-    .lean<any[]>()
-    .catch(() => []);
-  return docs.map((d) => toPublicUser(docToStoredUser(d)));
+/** Look up a user's public shape by id (used to attribute wholesale records). */
+export async function getPublicUserById(id: string): Promise<PublicUser | null> {
+  const user = await findUserById(id);
+  return user ? toPublicUser(user) : null;
 }

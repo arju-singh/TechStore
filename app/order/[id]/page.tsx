@@ -90,17 +90,17 @@ export default async function OrderPage({
         <div className="mb-6 rounded-xl border border-fuchsia-200 bg-fuchsia-50 p-5">
           <p className="font-semibold text-fuchsia-800">Your quote is ready</p>
           <div className="mt-2 flex flex-wrap items-baseline gap-2">
-            <span className="text-2xl font-bold text-slate-900">
+            <span className="text-2xl font-bold text-white">
               {formatINR(order.quotedTotal)}
             </span>
-            <span className="text-sm text-slate-500 line-through">
+            <span className="text-sm text-white/50 line-through">
               {formatINR(order.total)}
             </span>
           </div>
           {order.quoteNote && (
-            <p className="mt-1 text-sm text-slate-600">“{order.quoteNote}”</p>
+            <p className="mt-1 text-sm text-white/70">“{order.quoteNote}”</p>
           )}
-          <p className="mt-3 text-xs text-slate-500">
+          <p className="mt-3 text-xs text-white/50">
             Accepting converts this to a Net-30 credit order at the quoted price.
           </p>
           <div className="mt-3">
@@ -111,10 +111,10 @@ export default async function OrderPage({
 
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900">
+          <h1 className="text-2xl font-bold text-white">
             Order #{order.id.slice(-8)}
           </h1>
-          <p className="mt-1 text-sm text-slate-500">
+          <p className="mt-1 text-sm text-white/50">
             Placed on {formatDate(order.createdAt)}
           </p>
         </div>
@@ -122,13 +122,13 @@ export default async function OrderPage({
       </div>
 
       {/* Items */}
-      <section className="mt-6 overflow-hidden rounded-xl border border-slate-200 bg-white">
-        <ul className="divide-y divide-slate-100">
+      <section className="mt-6 overflow-hidden rounded-xl border border-white/10 bg-white/[0.02]">
+        <ul className="divide-y divide-white/10">
           {order.items.map((item) => (
             <li key={item.slug} className="flex items-center gap-4 p-4">
               <Link
                 href={`/product/${item.slug}`}
-                className="relative h-16 w-16 shrink-0 overflow-hidden rounded-lg bg-slate-100"
+                className="relative h-16 w-16 shrink-0 overflow-hidden rounded-lg bg-white/10"
               >
                 {item.image && (
                   <Image src={item.image} alt={item.name} fill sizes="64px" className="object-cover" />
@@ -137,13 +137,13 @@ export default async function OrderPage({
               <div className="flex-1">
                 <Link
                   href={`/product/${item.slug}`}
-                  className="text-sm font-semibold text-slate-800 hover:text-brand-700"
+                  className="text-sm font-semibold text-white/80 hover:text-brand-700"
                 >
                   {item.name}
                 </Link>
-                <p className="text-xs text-slate-500">Qty {item.qty}</p>
+                <p className="text-xs text-white/50">Qty {item.qty}</p>
               </div>
-              <span className="text-sm font-semibold text-slate-900">
+              <span className="text-sm font-semibold text-white">
                 {formatINR(item.price * item.qty)}
               </span>
             </li>
@@ -153,64 +153,64 @@ export default async function OrderPage({
 
       <div className="mt-6 grid gap-6 sm:grid-cols-2">
         {/* Address */}
-        <section className="rounded-xl border border-slate-200 bg-white p-5">
-          <h2 className="text-sm font-semibold uppercase tracking-wide text-slate-500">
+        <section className="rounded-xl border border-white/10 bg-white/[0.02] p-5">
+          <h2 className="text-sm font-semibold uppercase tracking-wide text-white/50">
             Delivery address
           </h2>
-          <div className="mt-3 text-sm text-slate-700">
+          <div className="mt-3 text-sm text-white/70">
             <p className="font-medium">{order.address.fullName}</p>
             <p>{order.address.line1}</p>
             {order.address.line2 && <p>{order.address.line2}</p>}
             <p>
               {order.address.city}, {order.address.state} {order.address.pincode}
             </p>
-            <p className="mt-1 text-slate-500">Phone: {order.address.phone}</p>
+            <p className="mt-1 text-white/50">Phone: {order.address.phone}</p>
           </div>
         </section>
 
         {/* Payment summary */}
-        <section className="rounded-xl border border-slate-200 bg-white p-5">
-          <h2 className="text-sm font-semibold uppercase tracking-wide text-slate-500">
+        <section className="rounded-xl border border-white/10 bg-white/[0.02] p-5">
+          <h2 className="text-sm font-semibold uppercase tracking-wide text-white/50">
             Payment
           </h2>
           <dl className="mt-3 space-y-2 text-sm">
             <div className="flex justify-between">
-              <dt className="text-slate-500">Method</dt>
-              <dd className="font-medium text-slate-800">
+              <dt className="text-white/50">Method</dt>
+              <dd className="font-medium text-white/80">
                 {PAYMENT_LABEL[order.paymentMethod] ?? order.paymentMethod}
               </dd>
             </div>
             {order.poNumber && (
               <div className="flex justify-between">
-                <dt className="text-slate-500">PO number</dt>
-                <dd className="font-medium text-slate-800">{order.poNumber}</dd>
+                <dt className="text-white/50">PO number</dt>
+                <dd className="font-medium text-white/80">{order.poNumber}</dd>
               </div>
             )}
             {order.creditDueDate && (
               <div className="flex justify-between">
-                <dt className="text-slate-500">Payment due</dt>
+                <dt className="text-white/50">Payment due</dt>
                 <dd className="font-medium text-teal-700">{order.creditDueDate}</dd>
               </div>
             )}
             {order.razorpayPaymentId && (
               <div className="flex justify-between">
-                <dt className="text-slate-500">Payment ID</dt>
-                <dd className="font-mono text-xs text-slate-700">
+                <dt className="text-white/50">Payment ID</dt>
+                <dd className="font-mono text-xs text-white/70">
                   {order.razorpayPaymentId}
                 </dd>
               </div>
             )}
             <div className="flex justify-between">
-              <dt className="text-slate-500">Subtotal (incl. GST)</dt>
-              <dd className="font-medium text-slate-800">{formatINR(order.subtotal)}</dd>
+              <dt className="text-white/50">Subtotal (incl. GST)</dt>
+              <dd className="font-medium text-white/80">{formatINR(order.subtotal)}</dd>
             </div>
             <div className="flex justify-between text-xs">
-              <dt className="text-slate-400">of which GST ({gst.rate}%)</dt>
-              <dd className="text-slate-500">{formatINR(gst.tax)}</dd>
+              <dt className="text-white/40">of which GST ({gst.rate}%)</dt>
+              <dd className="text-white/50">{formatINR(gst.tax)}</dd>
             </div>
             {order.couponDiscount > 0 && (
               <div className="flex justify-between">
-                <dt className="text-slate-500">
+                <dt className="text-white/50">
                   Coupon{order.couponCode ? ` (${order.couponCode})` : ""}
                 </dt>
                 <dd className="font-medium text-green-600">
@@ -219,14 +219,14 @@ export default async function OrderPage({
               </div>
             )}
             <div className="flex justify-between">
-              <dt className="text-slate-500">Delivery</dt>
-              <dd className="font-medium text-slate-800">
+              <dt className="text-white/50">Delivery</dt>
+              <dd className="font-medium text-white/80">
                 {order.deliveryFee === 0 ? "FREE" : formatINR(order.deliveryFee)}
               </dd>
             </div>
-            <div className="flex justify-between border-t border-slate-100 pt-2">
-              <dt className="font-semibold text-slate-900">Total</dt>
-              <dd className="font-bold text-slate-900">{formatINR(order.total)}</dd>
+            <div className="flex justify-between border-t border-white/10 pt-2">
+              <dt className="font-semibold text-white">Total</dt>
+              <dd className="font-bold text-white">{formatINR(order.total)}</dd>
             </div>
           </dl>
         </section>
@@ -242,14 +242,14 @@ export default async function OrderPage({
         {!isQuote && (
           <Link
             href={`/order/${order.id}/invoice`}
-            className="rounded-lg border border-slate-200 px-5 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50"
+            className="rounded-lg border border-white/10 px-5 py-2.5 text-sm font-semibold text-white/70 hover:bg-white/5"
           >
             Tax invoice
           </Link>
         )}
         <Link
           href="/products"
-          className="rounded-lg border border-slate-200 px-5 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50"
+          className="rounded-lg border border-white/10 px-5 py-2.5 text-sm font-semibold text-white/70 hover:bg-white/5"
         >
           Continue shopping
         </Link>

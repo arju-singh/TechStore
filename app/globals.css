@@ -2,11 +2,6 @@
 @tailwind components;
 @tailwind utilities;
 
-:root {
-  --font-sans: "Amazon Ember", Arial, Helvetica, sans-serif;
-  --font-display: "Amazon Ember", Arial, Helvetica, sans-serif;
-}
-
 html {
   scroll-behavior: smooth;
 }
@@ -14,54 +9,75 @@ html {
 @layer base {
   body {
     @apply bg-amz-bg text-ink antialiased;
+    /* Subtle top vignette so the near-black page has depth. */
+    background-image: radial-gradient(
+      120% 90% at 50% -10%,
+      rgba(212, 245, 106, 0.06) 0%,
+      rgba(10, 10, 11, 0) 55%
+    );
+    background-attachment: fixed;
   }
   h1, h2, h3, h4 {
     @apply font-semibold tracking-tight;
   }
+  a {
+    @apply transition-colors duration-200;
+  }
   ::selection {
-    @apply bg-amz-yellow/40;
+    @apply bg-brand-400/30 text-white;
   }
 }
 
 @layer components {
-  /* Gradient text (unused in Amazon theme, kept for compatibility) */
   .text-gradient {
-    @apply text-brand-600;
+    @apply bg-gradient-to-r from-white to-white/60 bg-clip-text text-transparent;
   }
 
   .glass {
-    @apply border border-amz-border bg-white;
+    @apply rounded-2xl border border-white/10 bg-white/[0.03] backdrop-blur-md;
   }
 
-  /* Buttons — Amazon pill style */
+  /* Buttons — minimal, pill-free, tight radius */
   .btn {
-    @apply inline-flex items-center justify-center gap-2 rounded-full px-5 py-2.5 text-sm font-medium transition duration-150 focus:outline-none focus:ring-2 focus:ring-amz-orange/60 disabled:cursor-not-allowed disabled:opacity-60;
+    @apply inline-flex items-center justify-center gap-2 rounded-full px-5 py-2.5 text-sm font-semibold transition duration-200 focus:outline-none focus:ring-2 focus:ring-brand-400/50 disabled:cursor-not-allowed disabled:opacity-60;
   }
-  /* Add to Cart — yellow */
+  /* Primary — lime accent on black */
   .btn-primary {
-    @apply btn border border-amz-yellowH bg-amz-yellow text-ink shadow-soft hover:bg-amz-yellowH;
+    @apply btn bg-brand-400 text-black hover:bg-brand-300;
   }
-  /* Buy Now — orange */
   .btn-buy {
-    @apply btn border border-amz-orangeH bg-amz-orange text-ink shadow-soft hover:bg-amz-orangeH;
+    @apply btn bg-white text-black hover:bg-white/90;
   }
   .btn-dark {
-    @apply btn bg-amz-navy2 text-white hover:bg-amz-navy3;
+    @apply btn bg-amz-navy3 text-white hover:bg-white/10;
   }
   .btn-ghost {
-    @apply btn border border-amz-border bg-white text-ink hover:bg-amz-bg;
+    @apply btn border border-white/15 bg-transparent text-white hover:border-white/40 hover:bg-white/5;
   }
   .btn-pop {
     @apply btn-primary;
   }
 
-  /* Card — flat white */
+  /* Card — dark glass surface */
   .card {
-    @apply rounded-lg border border-amz-border bg-white shadow-soft;
+    @apply rounded-2xl border border-white/10 bg-white/[0.02];
   }
 
   .chip {
-    @apply inline-flex items-center gap-1.5 rounded px-2.5 py-1 text-xs font-medium;
+    @apply inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium;
+  }
+
+  /* Scroll-reveal: paired with components/Reveal.tsx (IntersectionObserver). */
+  .reveal {
+    opacity: 0;
+    transform: translateY(20px);
+    transition: opacity 0.6s cubic-bezier(0.22, 1, 0.36, 1),
+      transform 0.6s cubic-bezier(0.22, 1, 0.36, 1);
+    will-change: opacity, transform;
+  }
+  .reveal.is-in {
+    opacity: 1;
+    transform: none;
   }
 }
 
@@ -79,5 +95,9 @@ html {
   *::after {
     animation: none !important;
     transition: none !important;
+  }
+  .reveal {
+    opacity: 1;
+    transform: none;
   }
 }

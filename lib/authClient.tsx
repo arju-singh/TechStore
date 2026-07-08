@@ -13,12 +13,9 @@ export interface AuthUser {
   name: string;
   email: string;
   role: "customer" | "admin";
-  accountType: "retail" | "wholesale";
-  wholesaleStatus: "none" | "pending" | "approved" | "rejected";
+  /** True when the user owns an approved wholesaler profile (distinct role). */
   isWholesaler: boolean;
-  companyName: string;
-  gstin: string;
-  businessPhone: string;
+  membershipTier: string;
 }
 
 interface AuthContextValue {

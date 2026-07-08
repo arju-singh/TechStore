@@ -62,7 +62,7 @@ export default function CouponInput() {
           value={code}
           onChange={(e) => setCode(e.target.value.toUpperCase())}
           placeholder="Coupon code"
-          className="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm uppercase outline-none transition focus:border-brand-400 focus:bg-white focus:ring-2 focus:ring-brand-100"
+          className="w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm uppercase outline-none transition focus:border-brand-400 focus:bg-white/[0.02] focus:ring-2 focus:ring-brand-100"
         />
         <button
           type="submit"
@@ -78,12 +78,12 @@ export default function CouponInput() {
       )}
 
       {available.length > 0 && (
-        <div className="mt-2 text-xs text-slate-500">
+        <div className="mt-2 text-xs text-white/50">
           {(showAll ? available : available.slice(0, 2)).map((c) => (
             <button
               key={c.code}
               onClick={() => setCode(c.code)}
-              className="mr-2 mt-1 inline-flex items-center gap-1 rounded-md border border-dashed border-slate-300 px-2 py-0.5 font-medium text-slate-600 hover:border-brand-400 hover:text-brand-700"
+              className="mr-2 mt-1 inline-flex items-center gap-1 rounded-md border border-dashed border-white/15 px-2 py-0.5 font-medium text-white/70 hover:border-brand-400 hover:text-brand-700"
               title={c.description}
             >
               {c.code}

@@ -1,7 +1,7 @@
 import type { OrderStatus } from "@/lib/orders";
 
 const STYLES: Record<OrderStatus, string> = {
-  pending: "bg-slate-100 text-slate-600",
+  pending: "bg-white/10 text-white/70",
   confirmed: "bg-blue-50 text-blue-700",
   paid: "bg-indigo-50 text-indigo-700",
   shipped: "bg-amber-50 text-amber-700",

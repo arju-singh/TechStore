@@ -50,7 +50,7 @@ export default async function ProductPage({
   return (
     <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6">
       {/* Breadcrumb */}
-      <nav className="mb-6 flex flex-wrap items-center gap-1.5 text-sm text-slate-500">
+      <nav className="mb-6 flex flex-wrap items-center gap-1.5 text-sm text-white/50">
         <Link href="/" className="hover:text-brand-600">Home</Link>
         <span>/</span>
         <Link href="/products" className="hover:text-brand-600">Products</Link>
@@ -66,22 +66,22 @@ export default async function ProductPage({
           </>
         )}
         <span>/</span>
-        <span className="text-slate-700">{product.name}</span>
+        <span className="text-white/70">{product.name}</span>
       </nav>
 
       <div className="grid gap-8 lg:grid-cols-2">
         {/* Image */}
-        <div className="relative aspect-square overflow-hidden rounded-2xl border border-slate-200 bg-white">
+        <div className="relative aspect-square overflow-hidden rounded-2xl border border-white/10 bg-white">
           <Image
             src={product.image}
             alt={product.name}
             fill
             sizes="(max-width: 1024px) 100vw, 50vw"
-            className="object-cover"
+            className="object-contain p-8"
             priority
           />
           {off > 0 && (
-            <span className="absolute left-4 top-4 rounded-lg bg-brand-600 px-3 py-1 text-sm font-semibold text-white">
+            <span className="absolute left-4 top-4 rounded-full bg-brand-400 px-3 py-1 text-sm font-semibold text-black">
               {off}% OFF
             </span>
           )}
@@ -92,21 +92,21 @@ export default async function ProductPage({
           <span className="text-sm font-medium uppercase tracking-wide text-brand-600">
             {product.brand}
           </span>
-          <h1 className="mt-1 text-2xl font-bold text-slate-900 sm:text-3xl">
+          <h1 className="mt-1 text-2xl font-bold text-white sm:text-3xl">
             {product.name}
           </h1>
           <div className="mt-3">
             <Stars rating={product.rating} numReviews={product.numReviews} />
           </div>
 
-          <div className="mt-5 rounded-xl bg-slate-50 p-5">
+          <div className="mt-5 rounded-xl bg-white/5 p-5">
             <PriceTag mrp={product.mrp} price={product.price} size="lg" />
             {saved > 0 && (
               <p className="mt-1 text-sm font-medium text-green-600">
                 You save {formatINR(saved)}
               </p>
             )}
-            <p className="mt-2 text-xs text-slate-400">
+            <p className="mt-2 text-xs text-white/40">
               Inclusive of all taxes
             </p>
           </div>
@@ -122,7 +122,19 @@ export default async function ProductPage({
             )}
           </div>
 
-          <p className="mt-4 text-sm leading-relaxed text-slate-600">
+          {product.vendorSlug && product.vendorName && (
+            <p className="mt-3 text-sm text-white/50">
+              Sold by{" "}
+              <Link
+                href={`/store/${product.vendorSlug}`}
+                className="font-medium text-brand-600 hover:underline"
+              >
+                {product.vendorName}
+              </Link>
+            </p>
+          )}
+
+          <p className="mt-4 text-sm leading-relaxed text-white/60">
             {product.description}
           </p>
 
@@ -136,7 +148,7 @@ export default async function ProductPage({
           </div>
 
           {/* Trust badges */}
-          <div className="mt-6 grid grid-cols-3 gap-3 border-t border-slate-100 pt-6 text-center text-xs text-slate-500">
+          <div className="mt-6 grid grid-cols-3 gap-3 border-t border-white/10 pt-6 text-center text-xs text-white/50">
             <Badge title="Free delivery" sub="Over ₹499" />
             <Badge title="COD available" sub="Pay on delivery" />
             <Badge title="7-day returns" sub="Easy & free" />
@@ -147,16 +159,16 @@ export default async function ProductPage({
       {/* Specs */}
       {Object.keys(product.specs).length > 0 && (
         <section className="mt-12">
-          <h2 className="mb-4 text-xl font-bold text-slate-900">Specifications</h2>
-          <div className="overflow-hidden rounded-xl border border-slate-200 bg-white">
+          <h2 className="mb-4 text-xl font-bold text-white">Specifications</h2>
+          <div className="overflow-hidden rounded-xl border border-white/10 bg-white/[0.02]">
             <table className="w-full text-sm">
-              <tbody className="divide-y divide-slate-100">
+              <tbody className="divide-y divide-white/10">
                 {Object.entries(product.specs).map(([k, v]) => (
                   <tr key={k}>
-                    <td className="w-1/3 bg-slate-50 px-5 py-3 font-medium text-slate-600">
+                    <td className="w-1/3 bg-white/5 px-5 py-3 font-medium text-white/60">
                       {k}
                     </td>
-                    <td className="px-5 py-3 text-slate-800">{v}</td>
+                    <td className="px-5 py-3 text-white/80">{v}</td>
                   </tr>
                 ))}
               </tbody>
@@ -168,7 +180,7 @@ export default async function ProductPage({
       {/* Related */}
       {related.length > 0 && (
         <section className="mt-12">
-          <h2 className="mb-4 text-xl font-bold text-slate-900">
+          <h2 className="mb-4 text-xl font-bold text-white">
             You might also like
           </h2>
           <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
@@ -185,7 +197,7 @@ export default async function ProductPage({
 function Badge({ title, sub }: { title: string; sub: string }) {
   return (
     <div>
-      <div className="font-semibold text-slate-700">{title}</div>
+      <div className="font-semibold text-white/70">{title}</div>
       <div>{sub}</div>
     </div>
   );

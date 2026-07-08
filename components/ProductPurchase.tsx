@@ -46,7 +46,7 @@ export default function ProductPurchase({ product }: { product: Product }) {
     return (
       <button
         disabled
-        className="w-full cursor-not-allowed rounded-lg bg-slate-200 px-6 py-3 text-sm font-semibold text-slate-500"
+        className="w-full cursor-not-allowed rounded-lg bg-white/10 px-6 py-3 text-sm font-semibold text-white/50"
       >
         Out of stock
       </button>
@@ -58,14 +58,14 @@ export default function ProductPurchase({ product }: { product: Product }) {
       <VolumePricing product={product} qty={qty} />
 
       <div className="flex items-center gap-3">
-        <span className="text-sm font-medium text-slate-600">Quantity</span>
-        <div className="flex items-center rounded-lg border border-slate-200">
+        <span className="text-sm font-medium text-white/70">Quantity</span>
+        <div className="flex items-center rounded-lg border border-white/10">
           <button
             type="button"
             onClick={() => setQty((q) => Math.max(1, q - 1))}
             disabled={qty <= 1}
             aria-label="Decrease quantity"
-            className="flex h-9 w-9 items-center justify-center text-lg text-slate-600 disabled:text-slate-300"
+            className="flex h-9 w-9 items-center justify-center text-lg text-white/70 disabled:text-white/30"
           >
             −
           </button>
@@ -75,34 +75,34 @@ export default function ProductPurchase({ product }: { product: Product }) {
             onClick={() => setQty((q) => Math.min(maxAddable, q + 1))}
             disabled={qty >= maxAddable}
             aria-label="Increase quantity"
-            className="flex h-9 w-9 items-center justify-center text-lg text-slate-600 disabled:text-slate-300"
+            className="flex h-9 w-9 items-center justify-center text-lg text-white/70 disabled:text-white/30"
           >
             +
           </button>
         </div>
         {inCart > 0 && (
-          <span className="text-xs text-slate-500">{inCart} already in cart</span>
+          <span className="text-xs text-white/50">{inCart} already in cart</span>
         )}
       </div>
 
       {/* Live price for the selected quantity, reflecting volume/wholesale. */}
       {qty > 1 && (
-        <div className="flex items-baseline justify-between rounded-lg bg-slate-50 px-3 py-2 text-sm">
-          <span className="text-slate-600">
+        <div className="flex items-baseline justify-between rounded-lg bg-white/5 px-3 py-2 text-sm">
+          <span className="text-white/70">
             {unitSaving > 0 ? (
               <>
                 <span className="font-semibold text-emerald-700">{formatINR(unitPrice)}</span>
-                <span className="text-slate-400"> /unit · </span>
+                <span className="text-white/40"> /unit · </span>
                 <span className="text-emerald-700">save {formatINR(unitSaving)}/unit</span>
               </>
             ) : (
               <>
-                <span className="font-semibold text-slate-800">{formatINR(unitPrice)}</span>
-                <span className="text-slate-400"> /unit</span>
+                <span className="font-semibold text-white/80">{formatINR(unitPrice)}</span>
+                <span className="text-white/40"> /unit</span>
               </>
             )}
           </span>
-          <span className="font-semibold text-slate-900">{formatINR(lineTotal)}</span>
+          <span className="font-semibold text-white">{formatINR(lineTotal)}</span>
         </div>
       )}
 

@@ -23,16 +23,16 @@ export default async function OrdersPage() {
   return (
     <div className="mx-auto max-w-3xl px-4 py-10 sm:px-6">
       <div className="mb-6 flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-slate-900 sm:text-3xl">Your orders</h1>
+        <h1 className="text-2xl font-bold text-white sm:text-3xl">Your orders</h1>
         <Link href="/account" className="text-sm font-medium text-brand-600 hover:underline">
           ← Account
         </Link>
       </div>
 
       {orders.length === 0 ? (
-        <div className="rounded-xl border border-dashed border-slate-300 bg-white p-12 text-center">
-          <p className="text-lg font-semibold text-slate-700">No orders yet</p>
-          <p className="mt-1 text-sm text-slate-500">
+        <div className="rounded-xl border border-dashed border-white/15 bg-white/[0.02] p-12 text-center">
+          <p className="text-lg font-semibold text-white/70">No orders yet</p>
+          <p className="mt-1 text-sm text-white/50">
             When you place an order, it'll show up here.
           </p>
           <Link
@@ -50,14 +50,14 @@ export default async function OrdersPage() {
               <li key={order.id}>
                 <Link
                   href={`/order/${order.id}`}
-                  className="block rounded-xl border border-slate-200 bg-white p-5 transition hover:border-brand-300 hover:shadow-md"
+                  className="block rounded-xl border border-white/10 bg-white/[0.02] p-5 transition hover:border-brand-300 hover:shadow-md"
                 >
                   <div className="flex flex-wrap items-center justify-between gap-2">
                     <div>
-                      <span className="text-sm font-semibold text-slate-800">
+                      <span className="text-sm font-semibold text-white/80">
                         Order #{order.id.slice(-8)}
                       </span>
-                      <p className="text-xs text-slate-500">
+                      <p className="text-xs text-white/50">
                         {formatDate(order.createdAt)} · {itemCount}{" "}
                         {itemCount === 1 ? "item" : "items"}
                       </p>
@@ -65,10 +65,10 @@ export default async function OrdersPage() {
                     <OrderStatusBadge status={order.status} />
                   </div>
                   <div className="mt-3 flex items-center justify-between">
-                    <p className="line-clamp-1 text-sm text-slate-500">
+                    <p className="line-clamp-1 text-sm text-white/50">
                       {order.items.map((i) => i.name).join(", ")}
                     </p>
-                    <span className="ml-3 whitespace-nowrap text-sm font-bold text-slate-900">
+                    <span className="ml-3 whitespace-nowrap text-sm font-bold text-white">
                       {formatINR(order.total)}
                     </span>
                   </div>

@@ -14,8 +14,8 @@ export default async function AdminProductsPage() {
     <div>
       <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900">Products</h1>
-          <p className="mt-1 text-sm text-slate-500">{products.length} products</p>
+          <h1 className="text-2xl font-bold text-white">Products</h1>
+          <p className="mt-1 text-sm text-white/50">{products.length} products</p>
         </div>
         <Link
           href="/admin/products/new"
@@ -25,11 +25,11 @@ export default async function AdminProductsPage() {
         </Link>
       </div>
 
-      <div className="overflow-hidden rounded-xl border border-slate-200 bg-white">
+      <div className="overflow-hidden rounded-xl border border-white/10 bg-white/[0.02]">
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
-              <tr className="border-b border-slate-100 bg-slate-50 text-left text-xs uppercase tracking-wide text-slate-500">
+              <tr className="border-b border-white/10 bg-white/5 text-left text-xs uppercase tracking-wide text-white/50">
                 <th className="px-4 py-3 font-semibold">Product</th>
                 <th className="px-4 py-3 font-semibold">Category</th>
                 <th className="px-4 py-3 font-semibold">Price</th>
@@ -37,25 +37,25 @@ export default async function AdminProductsPage() {
                 <th className="px-4 py-3 text-right font-semibold">Actions</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-100">
+            <tbody className="divide-y divide-white/10">
               {products.map((p) => (
-                <tr key={p.slug} className="hover:bg-slate-50">
+                <tr key={p.slug} className="hover:bg-white/5">
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-3">
-                      <div className="relative h-10 w-10 shrink-0 overflow-hidden rounded-md bg-slate-100">
+                      <div className="relative h-10 w-10 shrink-0 overflow-hidden rounded-md bg-white/10">
                         <Image src={p.image} alt={p.name} fill sizes="40px" className="object-cover" />
                       </div>
                       <div className="min-w-0">
-                        <div className="truncate font-medium text-slate-800">{p.name}</div>
-                        <div className="text-xs text-slate-400">{p.brand}</div>
+                        <div className="truncate font-medium text-white/80">{p.name}</div>
+                        <div className="text-xs text-white/40">{p.brand}</div>
                       </div>
                     </div>
                   </td>
-                  <td className="px-4 py-3 capitalize text-slate-600">{p.category}</td>
+                  <td className="px-4 py-3 capitalize text-white/70">{p.category}</td>
                   <td className="px-4 py-3">
-                    <div className="font-medium text-slate-800">{formatINR(p.price)}</div>
+                    <div className="font-medium text-white/80">{formatINR(p.price)}</div>
                     {p.mrp > p.price && (
-                      <div className="text-xs text-slate-400 line-through">{formatINR(p.mrp)}</div>
+                      <div className="text-xs text-white/40 line-through">{formatINR(p.mrp)}</div>
                     )}
                   </td>
                   <td className="px-4 py-3">
@@ -87,5 +87,5 @@ function StockPill({ stock }: { stock: number }) {
     return <span className="rounded-full bg-red-50 px-2 py-0.5 text-xs font-semibold text-red-600">Out</span>;
   if (stock <= 10)
     return <span className="rounded-full bg-amber-50 px-2 py-0.5 text-xs font-semibold text-amber-600">{stock} left</span>;
-  return <span className="text-slate-600">{stock}</span>;
+  return <span className="text-white/70">{stock}</span>;
 }

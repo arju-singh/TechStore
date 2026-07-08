@@ -22,12 +22,12 @@ export default function SortSelect({ current }: { current: string }) {
   }
 
   return (
-    <label className="flex items-center gap-2 text-sm text-slate-600">
+    <label className="flex items-center gap-2 text-sm text-white/50">
       <span className="hidden sm:inline">Sort by</span>
       <select
         value={current}
         onChange={onChange}
-        className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-medium outline-none focus:border-brand-400 focus:ring-2 focus:ring-brand-100"
+        className="rounded-full border border-white/15 bg-white/5 px-4 py-2 text-sm font-medium text-white outline-none transition focus:border-white/40 [&>option]:bg-[#141416] [&>option]:text-white"
       >
         {OPTIONS.map((o) => (
           <option key={o.value} value={o.value}>

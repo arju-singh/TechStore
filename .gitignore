@@ -30,3 +30,6 @@ yarn-error.log*
 
 # iCloud-excluded build output (see next.config.mjs distDir)
 /build.nosync/
+
+# wholesaler-uploaded verification documents (local disk storage)
+/.uploads/
