@@ -1,0 +1,83 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --font-sans: "Amazon Ember", Arial, Helvetica, sans-serif;
+  --font-display: "Amazon Ember", Arial, Helvetica, sans-serif;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+@layer base {
+  body {
+    @apply bg-amz-bg text-ink antialiased;
+  }
+  h1, h2, h3, h4 {
+    @apply font-semibold tracking-tight;
+  }
+  ::selection {
+    @apply bg-amz-yellow/40;
+  }
+}
+
+@layer components {
+  /* Gradient text (unused in Amazon theme, kept for compatibility) */
+  .text-gradient {
+    @apply text-brand-600;
+  }
+
+  .glass {
+    @apply border border-amz-border bg-white;
+  }
+
+  /* Buttons — Amazon pill style */
+  .btn {
+    @apply inline-flex items-center justify-center gap-2 rounded-full px-5 py-2.5 text-sm font-medium transition duration-150 focus:outline-none focus:ring-2 focus:ring-amz-orange/60 disabled:cursor-not-allowed disabled:opacity-60;
+  }
+  /* Add to Cart — yellow */
+  .btn-primary {
+    @apply btn border border-amz-yellowH bg-amz-yellow text-ink shadow-soft hover:bg-amz-yellowH;
+  }
+  /* Buy Now — orange */
+  .btn-buy {
+    @apply btn border border-amz-orangeH bg-amz-orange text-ink shadow-soft hover:bg-amz-orangeH;
+  }
+  .btn-dark {
+    @apply btn bg-amz-navy2 text-white hover:bg-amz-navy3;
+  }
+  .btn-ghost {
+    @apply btn border border-amz-border bg-white text-ink hover:bg-amz-bg;
+  }
+  .btn-pop {
+    @apply btn-primary;
+  }
+
+  /* Card — flat white */
+  .card {
+    @apply rounded-lg border border-amz-border bg-white shadow-soft;
+  }
+
+  .chip {
+    @apply inline-flex items-center gap-1.5 rounded px-2.5 py-1 text-xs font-medium;
+  }
+}
+
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation: none !important;
+    transition: none !important;
+  }
+}
