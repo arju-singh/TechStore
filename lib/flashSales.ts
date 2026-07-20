@@ -1,20 +1,18 @@
 import { hasDatabase, connectToDatabase } from "@/lib/mongodb";
 import FlashSaleModel from "@/lib/models/FlashSale";
+import { getProducts } from "@/lib/products";
 import type { Product } from "@/lib/types";
+import type {
+  FlashSale,
+  FlashSaleItem,
+  FlashSaleInput,
+  FlashSaleStatus,
+} from "@/lib/flashSaleShared";
 
-export interface FlashSaleItem {
-  slug: string;
-  /** Percentage off the product's current selling price (1–90). */
-  discountPct: number;
-}
-
-export interface FlashSale {
-  id: string;
-  title: string;
-  startsAt: string;
-  endsAt: string;
-  items: FlashSaleItem[];
-}
+// Re-export the client-safe types + status helper so server callers can keep
+// importing them from "@/lib/flashSales".
+export type { FlashSale, FlashSaleItem, FlashSaleInput, FlashSaleStatus } from "@/lib/flashSaleShared";
+export { flashSaleStatus } from "@/lib/flashSaleShared";
 
 /** Per-slug flash discount + when the sale ends, for the currently-active sale. */
 export type FlashPriceMap = Map<string, { discountPct: number; endsAt: string }>;
@@ -36,6 +34,7 @@ function memFlashSale(): FlashSale {
     global._memFlashSale = {
       id: "seed-flash-sale",
       title: "Lightning Deals",
+      enabled: true,
       startsAt: new Date(now - HOUR).toISOString(),
       endsAt: new Date(now + 6 * HOUR).toISOString(),
       items: [
@@ -55,6 +54,7 @@ function toPlainSale(doc: any): FlashSale {
   return {
     id: String(doc._id ?? doc.id),
     title: doc.title,
+    enabled: doc.enabled !== false,
     startsAt:
       doc.startsAt instanceof Date ? doc.startsAt.toISOString() : String(doc.startsAt),
     endsAt: doc.endsAt instanceof Date ? doc.endsAt.toISOString() : String(doc.endsAt),
@@ -143,4 +143,117 @@ export function applyFlashToProducts(products: Product[], map: FlashPriceMap): P
 export async function withFlashPricing(products: Product[]): Promise<Product[]> {
   const map = await getFlashPriceMap();
   return applyFlashToProducts(products, map);
+}
+
+// ---------------------------------------------------------------------------
+// Admin management (DB-backed). The in-memory demo sale is a read-only fallback
+// for the storefront; admin CRUD operates on real database records, which take
+// precedence over the demo once one is active.
+// ---------------------------------------------------------------------------
+
+function requireDb() {
+  if (!hasDatabase) {
+    throw new Error("Flash-sale management requires a database (set MONGODB_URI).");
+  }
+}
+
+/** Reject item slugs that don't reference a real product. Error string, or null. */
+export async function validateFlashItemSlugs(items: unknown): Promise<string | null> {
+  if (!Array.isArray(items)) return null;
+  const valid = new Set((await getProducts()).map((p) => p.slug));
+  for (const it of items) {
+    const slug = String((it as { slug?: unknown })?.slug ?? "").trim();
+    if (slug && !valid.has(slug)) return `Unknown product: ${slug}.`;
+  }
+  return null;
+}
+
+/** All flash sales, newest first — for the admin screen (DB only). */
+export async function getAllFlashSales(): Promise<FlashSale[]> {
+  if (!hasDatabase) return [];
+  await connectToDatabase();
+  const docs = await FlashSaleModel.find().sort({ createdAt: -1 }).lean();
+  return docs.map(toPlainSale);
+}
+
+export async function getFlashSaleById(id: string): Promise<FlashSale | null> {
+  if (!hasDatabase) return null;
+  await connectToDatabase();
+  const doc = await FlashSaleModel.findById(id)
+    .lean()
+    .catch(() => null);
+  return doc ? toPlainSale(doc) : null;
+}
+
+/** Validate + normalize sale input. Returns clean fields or throws a clear error. */
+function normalizeInput(input: FlashSaleInput): {
+  title: string;
+  startsAt: Date;
+  endsAt: Date;
+  enabled: boolean;
+  items: FlashSaleItem[];
+} {
+  const title = String(input.title ?? "").trim();
+  if (!title) throw new Error("Title is required.");
+
+  const startsAt = new Date(input.startsAt);
+  const endsAt = new Date(input.endsAt);
+  if (Number.isNaN(startsAt.getTime()) || Number.isNaN(endsAt.getTime())) {
+    throw new Error("Start and end must be valid dates.");
+  }
+  if (endsAt <= startsAt) throw new Error("End time must be after the start time.");
+
+  const items: FlashSaleItem[] = Array.isArray(input.items) ? input.items : [];
+  const seen = new Set<string>();
+  const clean: FlashSaleItem[] = [];
+  for (const it of items) {
+    const slug = String(it?.slug ?? "").trim();
+    const pct = Math.round(Number(it?.discountPct));
+    if (!slug) continue;
+    if (!Number.isFinite(pct) || pct < 1 || pct > 90) {
+      throw new Error(`Discount for "${slug}" must be between 1 and 90%.`);
+    }
+    if (seen.has(slug)) throw new Error(`Duplicate product in the sale: ${slug}.`);
+    seen.add(slug);
+    clean.push({ slug, discountPct: pct });
+  }
+
+  return { title, startsAt, endsAt, enabled: Boolean(input.enabled), items: clean };
+}
+
+export async function createFlashSale(input: FlashSaleInput): Promise<FlashSale> {
+  requireDb();
+  await connectToDatabase();
+  const data = normalizeInput(input);
+  const doc = await FlashSaleModel.create(data);
+  return toPlainSale(doc.toObject());
+}
+
+export async function updateFlashSale(
+  id: string,
+  input: FlashSaleInput
+): Promise<FlashSale | null> {
+  requireDb();
+  await connectToDatabase();
+  const data = normalizeInput(input);
+  const doc = await FlashSaleModel.findByIdAndUpdate(id, data, { new: true }).lean();
+  return doc ? toPlainSale(doc) : null;
+}
+
+/** Flip just the enabled flag (used by the row toggle). */
+export async function setFlashSaleEnabled(
+  id: string,
+  enabled: boolean
+): Promise<FlashSale | null> {
+  requireDb();
+  await connectToDatabase();
+  const doc = await FlashSaleModel.findByIdAndUpdate(id, { enabled }, { new: true }).lean();
+  return doc ? toPlainSale(doc) : null;
+}
+
+export async function deleteFlashSale(id: string): Promise<boolean> {
+  requireDb();
+  await connectToDatabase();
+  const res = await FlashSaleModel.deleteOne({ _id: id });
+  return res.deletedCount > 0;
 }
