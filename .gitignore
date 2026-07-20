@@ -28,6 +28,12 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 
+# testing
+/coverage/
+/test-results/
+/playwright-report/
+/playwright/.cache/
+
 # iCloud-excluded build output (see next.config.mjs distDir)
 /build.nosync/
 

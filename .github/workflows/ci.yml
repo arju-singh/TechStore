@@ -1,0 +1,61 @@
+name: CI
+
+# Run on every push and on pull requests.
+on:
+  push:
+  pull_request:
+
+# Cancel superseded runs on the same ref (e.g. rapid pushes to a branch).
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    name: Build, unit & e2e tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      # Cache the Playwright browser binaries, keyed to the lockfile (browser
+      # version is pinned by @playwright/test in the lock).
+      - name: Cache Playwright browsers
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: ${{ runner.os }}-playwright-${{ hashFiles('package-lock.json') }}
+          restore-keys: ${{ runner.os }}-playwright-
+
+      - name: Install Playwright (chromium + OS deps)
+        run: npx playwright install --with-deps chromium
+
+      # Production build — also the TypeScript type-check. The e2e web server
+      # then serves this build (playwright.config.ts uses `next start` in CI).
+      - name: Build
+        run: npm run build
+
+      - name: Unit & integration tests (Vitest)
+        run: npm test
+
+      - name: End-to-end tests (Playwright)
+        run: npm run test:e2e
+
+      # Publish the HTML report (and traces/screenshots) when a run fails, so
+      # failures are debuggable from the Actions run page.
+      - name: Upload Playwright report
+        if: ${{ failure() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: playwright-report/
+          retention-days: 7
