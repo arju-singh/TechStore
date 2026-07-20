@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import type { Category, Product } from "@/lib/types";
+import CloudinaryUpload from "./CloudinaryUpload";
 
 interface Props {
   mode: "create" | "edit";
@@ -132,7 +133,31 @@ export default function ProductForm({
         <Text label="MRP (₹)" value={form.mrp} onChange={(v) => set("mrp", v)} type="number" required />
         <Text label="Selling price (₹)" value={form.price} onChange={(v) => set("price", v)} type="number" required />
         <Text label="Stock" value={form.stock} onChange={(v) => set("stock", v)} type="number" required />
-        <Text label="Image URL" value={form.image} onChange={(v) => set("image", v)} placeholder="https://…" required />
+        <div className="sm:col-span-2">
+          <span className="mb-1 block text-sm font-medium text-white/70">Product image</span>
+          <div className="flex flex-wrap items-center gap-3">
+            {form.image && (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={form.image}
+                alt="Product preview"
+                className="h-16 w-16 shrink-0 rounded-lg border border-white/10 bg-white object-contain p-1"
+              />
+            )}
+            <CloudinaryUpload onUploaded={(url) => set("image", url)} />
+          </div>
+          <input
+            type="url"
+            value={form.image}
+            onChange={(e) => set("image", e.target.value)}
+            required
+            placeholder="https://… (or use Upload above)"
+            className="mt-2 w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2.5 text-sm outline-none focus:border-brand-400 focus:bg-white/[0.02] focus:ring-2 focus:ring-brand-100"
+          />
+          <span className="mt-1 block text-xs text-white/40">
+            Upload to Cloudinary (optimized + CDN-delivered), or paste an image URL.
+          </span>
+        </div>
         <Text label="Rating (0–5)" value={form.rating} onChange={(v) => set("rating", v)} type="number" />
         <Text label="Reviews count" value={form.numReviews} onChange={(v) => set("numReviews", v)} type="number" />
         <Text label="GST rate (%)" value={form.gstRate} onChange={(v) => set("gstRate", v)} type="number" hint="Prices are GST-inclusive. Default 18." />

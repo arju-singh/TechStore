@@ -26,11 +26,11 @@ const nextConfig = {
       : "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://checkout.razorpay.com";
     const csp = [
       "default-src 'self'",
-      "img-src 'self' data: https://images.unsplash.com https://picsum.photos https://cdn.dummyjson.com",
+      "img-src 'self' data: https://images.unsplash.com https://picsum.photos https://cdn.dummyjson.com https://res.cloudinary.com",
       scriptSrc,
       "style-src 'self' 'unsafe-inline'",
       "font-src 'self' data:",
-      "connect-src 'self' https://api.razorpay.com https://lumberjack.razorpay.com",
+      "connect-src 'self' https://api.razorpay.com https://lumberjack.razorpay.com https://api.cloudinary.com",
       "frame-src https://api.razorpay.com https://checkout.razorpay.com",
       "frame-ancestors 'none'",
       "base-uri 'self'",
