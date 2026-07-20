@@ -9,6 +9,7 @@ import {
   type OrderItem,
 } from "@/lib/orders";
 import { computeTotals, unitPriceFor, moqError, type PricingContext } from "@/lib/pricing";
+import { getFlashPriceMap, applyFlashSale } from "@/lib/flashSales";
 import { getVendorBySlug } from "@/lib/vendors";
 import { resolveCommissionRate, platformCommissionRate } from "@/lib/payouts";
 import { enforceRateLimit, rateLimit } from "@/lib/rateLimit";
@@ -141,6 +142,10 @@ export async function POST(request: Request) {
     return rate;
   };
 
+  // Active flash-sale discounts, resolved once and applied server-side so the
+  // charged price matches what the shopper saw — never trusted from the client.
+  const flashMap = await getFlashPriceMap();
+
   const items: OrderItem[] = [];
   for (const raw of rawItems) {
     const slug = typeof raw?.slug === "string" ? raw.slug : "";
@@ -151,13 +156,14 @@ export async function POST(request: Request) {
         { status: 400 }
       );
     }
-    const product = await getProductBySlug(slug);
-    if (!product) {
+    const rawProduct = await getProductBySlug(slug);
+    if (!rawProduct) {
       return NextResponse.json(
         { error: `Product no longer available: ${slug}` },
         { status: 409 }
       );
     }
+    const product = applyFlashSale(rawProduct, flashMap);
     if (product.stock < qty) {
       return NextResponse.json(
         { error: `Only ${product.stock} left of ${product.name}.` },

@@ -15,9 +15,13 @@ import ProductCard from "@/components/ProductCard";
 import ProductPurchase from "@/components/ProductPurchase";
 import PincodeCheck from "@/components/PincodeCheck";
 import ReviewsSection from "@/components/ReviewsSection";
+import RecordRecentlyViewed from "@/components/RecordRecentlyViewed";
+import RecentlyViewed from "@/components/RecentlyViewed";
+import Countdown from "@/components/Countdown";
 import { ProductJsonLd, BreadcrumbJsonLd } from "@/components/JsonLd";
 import { getCurrentUser } from "@/lib/auth";
 import { getReviews, getReviewSummary, getUserReview } from "@/lib/reviews";
+import { getFlashPriceMap, applyFlashSale, applyFlashToProducts } from "@/lib/flashSales";
 
 export async function generateMetadata({
   params,
@@ -59,16 +63,22 @@ export default async function ProductPage({
   params: Promise<{ slug: string }>;
 }) {
   const { slug } = await params;
-  const product = await getProductBySlug(slug);
-  if (!product) notFound();
+  const rawProduct = await getProductBySlug(slug);
+  if (!rawProduct) notFound();
 
-  const [related, category, reviews, reviewSummary, currentUser] = await Promise.all([
-    getRelatedProducts(product),
-    getCategory(product.category),
-    getReviews(product.slug),
-    getReviewSummary(product.slug),
-    getCurrentUser(),
-  ]);
+  const [flashMap, relatedRaw, category, reviews, reviewSummary, currentUser] =
+    await Promise.all([
+      getFlashPriceMap(),
+      getRelatedProducts(rawProduct),
+      getCategory(rawProduct.category),
+      getReviews(rawProduct.slug),
+      getReviewSummary(rawProduct.slug),
+      getCurrentUser(),
+    ]);
+  // Apply active flash-sale pricing so the whole PDP (price, add-to-cart snapshot,
+  // JSON-LD) reflects the sale — the checkout re-applies it server-side too.
+  const product = applyFlashSale(rawProduct, flashMap);
+  const related = applyFlashToProducts(relatedRaw, flashMap);
   const myReview = currentUser ? await getUserReview(product.slug, currentUser.id) : null;
 
   const off = discountPercent(product);
@@ -77,6 +87,7 @@ export default async function ProductPage({
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6">
+      <RecordRecentlyViewed slug={product.slug} />
       <ProductJsonLd product={product} />
       <BreadcrumbJsonLd
         items={[
@@ -137,6 +148,24 @@ export default async function ProductPage({
           <div className="mt-3">
             <Stars rating={product.rating} numReviews={product.numReviews} />
           </div>
+
+          {product.flashSale && (
+            <div className="mt-5 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-amber-400/30 bg-amber-400/[0.08] px-4 py-3">
+              <span className="inline-flex items-center gap-1.5 text-sm font-semibold text-amber-300">
+                <svg viewBox="0 0 24 24" fill="currentColor" className="h-4 w-4">
+                  <path d="M13 2 4.5 13.5H11l-1 8.5 8.5-11.5H12l1-8.5Z" />
+                </svg>
+                Flash sale
+                <span className="font-normal text-white/50">
+                  · was {formatINR(product.flashSale.originalPrice)}
+                </span>
+              </span>
+              <span className="flex items-center gap-2">
+                <span className="text-xs uppercase tracking-wide text-white/50">Ends in</span>
+                <Countdown endsAt={product.flashSale.endsAt} />
+              </span>
+            </div>
+          )}
 
           <div className="mt-5 rounded-xl bg-white/5 p-5">
             <PriceTag mrp={product.mrp} price={product.price} size="lg" />
@@ -238,6 +267,11 @@ export default async function ProductPage({
           </div>
         </section>
       )}
+
+      {/* Recently viewed (excludes this product) */}
+      <div className="mt-12">
+        <RecentlyViewed excludeSlug={product.slug} />
+      </div>
     </div>
   );
 }

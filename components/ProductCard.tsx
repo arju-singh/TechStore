@@ -25,10 +25,19 @@ export default function ProductCard({ product }: { product: Product }) {
           sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 20vw"
           className="object-contain p-4 transition duration-500 ease-out group-hover:scale-[1.06]"
         />
-        {off > 0 && (
-          <span className="absolute left-2 top-2 rounded-full bg-brand-400 px-2 py-0.5 text-[11px] font-bold text-black">
-            −{off}%
+        {product.flashSale ? (
+          <span className="absolute left-2 top-2 inline-flex items-center gap-0.5 rounded-full bg-gradient-to-r from-amber-400 to-brand-400 px-2 py-0.5 text-[11px] font-bold text-black shadow-pop">
+            <svg viewBox="0 0 24 24" fill="currentColor" className="h-3 w-3">
+              <path d="M13 2 4.5 13.5H11l-1 8.5 8.5-11.5H12l1-8.5Z" />
+            </svg>
+            {off > 0 ? `−${off}%` : "FLASH"}
           </span>
+        ) : (
+          off > 0 && (
+            <span className="absolute left-2 top-2 rounded-full bg-brand-400 px-2 py-0.5 text-[11px] font-bold text-black">
+              −{off}%
+            </span>
+          )
         )}
         {outOfStock && (
           <span className="absolute inset-x-0 bottom-0 bg-black/70 py-1 text-center text-xs font-semibold text-white backdrop-blur">

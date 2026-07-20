@@ -1,19 +1,30 @@
 import Image from "next/image";
 import Link from "next/link";
+import type { Product } from "@/lib/types";
 import {
   getFeaturedProducts,
   getProducts,
+  getProductsBySlugs,
   getCategories,
   getCategoryCounts,
   PRICE_RANGES,
 } from "@/lib/products";
+import {
+  getActiveFlashSale,
+  getFlashPriceMap,
+  applyFlashToProducts,
+} from "@/lib/flashSales";
 import ProductCard from "@/components/ProductCard";
 import ProductCarousel from "@/components/ProductCarousel";
+import FlashSaleSection from "@/components/FlashSaleSection";
+import RecentlyViewed from "@/components/RecentlyViewed";
 import Reveal from "@/components/Reveal";
 
 export default async function HomePage() {
-  const [featured, deals, categories, counts, onTheGo, budget, premium] =
+  const [flashMap, sale, featuredRaw, dealsRaw, categories, counts, onTheGoRaw, budgetRaw, premiumRaw] =
     await Promise.all([
+      getFlashPriceMap(),
+      getActiveFlashSale(),
       getFeaturedProducts(10),
       getProducts({ sort: "discount" }),
       getCategories(),
@@ -22,7 +33,17 @@ export default async function HomePage() {
       getProducts({ maxPrice: 10000, sort: "discount" }),
       getProducts({ minPrice: 50000, sort: "rating" }),
     ]);
-  const topDeals = deals.slice(0, 6);
+
+  // Apply active flash-sale pricing consistently across every rail.
+  const apply = (list: Product[]) => applyFlashToProducts(list, flashMap);
+  const featured = apply(featuredRaw);
+  const onTheGo = apply(onTheGoRaw);
+  const budget = apply(budgetRaw);
+  const premium = apply(premiumRaw);
+  const topDeals = apply(dealsRaw).slice(0, 6);
+  const flashProducts = sale
+    ? apply(await getProductsBySlugs(sale.items.map((i) => i.slug)))
+    : [];
 
   return (
     <div className="relative">
@@ -78,6 +99,12 @@ export default async function HomePage() {
       </Reveal>
 
       <div className="mx-auto max-w-[1500px] space-y-14 px-4 py-16 sm:px-6">
+        {sale && flashProducts.length > 0 && (
+          <Reveal>
+            <FlashSaleSection title={sale.title} endsAt={sale.endsAt} products={flashProducts} />
+          </Reveal>
+        )}
+
         {topDeals.length > 0 && (
           <Reveal>
             <Rail title="Today's deals" href="/products?sort=discount" products={topDeals} />
@@ -121,6 +148,10 @@ export default async function HomePage() {
               })}
             </div>
           </section>
+        </Reveal>
+
+        <Reveal>
+          <RecentlyViewed />
         </Reveal>
       </div>
     </div>
