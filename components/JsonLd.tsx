@@ -1,18 +1,18 @@
 import { SITE_NAME, SITE_URL, SITE_DESCRIPTION, absoluteUrl } from "@/lib/site";
 import type { Product } from "@/lib/types";
 import { discountPercent } from "@/lib/pricing";
+import { serializeJsonLd } from "@/lib/jsonLdSafe";
 
 /**
- * Emits a JSON-LD <script>. Allowed under the app's CSP because 'unsafe-inline'
- * covers inline scripts; ld+json is data, not executable code. Rendered on the
- * server so crawlers see it in the initial HTML.
+ * Emits a JSON-LD <script>. Rendered on the server so crawlers see it in the
+ * initial HTML. Content is escaped by `serializeJsonLd` so untrusted field
+ * values can never break out of the script tag.
  */
 function JsonLd({ data }: { data: Record<string, unknown> }) {
   return (
     <script
       type="application/ld+json"
-      // Structured data is a trusted, server-built object — safe to inline.
-      dangerouslySetInnerHTML={{ __html: JSON.stringify(data) }}
+      dangerouslySetInnerHTML={{ __html: serializeJsonLd(data) }}
     />
   );
 }
