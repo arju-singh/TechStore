@@ -14,6 +14,10 @@ import Stars from "@/components/Stars";
 import ProductCard from "@/components/ProductCard";
 import ProductPurchase from "@/components/ProductPurchase";
 import PincodeCheck from "@/components/PincodeCheck";
+import ReviewsSection from "@/components/ReviewsSection";
+import { ProductJsonLd, BreadcrumbJsonLd } from "@/components/JsonLd";
+import { getCurrentUser } from "@/lib/auth";
+import { getReviews, getReviewSummary, getUserReview } from "@/lib/reviews";
 
 export async function generateMetadata({
   params,
@@ -22,10 +26,30 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const { slug } = await params;
   const product = await getProductBySlug(slug);
-  if (!product) return { title: "Product not found" };
+  if (!product) {
+    return { title: "Product not found", robots: { index: false, follow: false } };
+  }
+  const canonical = `/product/${product.slug}`;
+  const description =
+    product.description ||
+    `Buy ${product.name} by ${product.brand} at TechStore.`;
   return {
     title: product.name,
-    description: product.description,
+    description,
+    alternates: { canonical },
+    openGraph: {
+      type: "website",
+      title: product.name,
+      description,
+      url: canonical,
+      images: [{ url: product.image, alt: product.name }],
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: product.name,
+      description,
+      images: [product.image],
+    },
   };
 }
 
@@ -38,10 +62,14 @@ export default async function ProductPage({
   const product = await getProductBySlug(slug);
   if (!product) notFound();
 
-  const [related, category] = await Promise.all([
+  const [related, category, reviews, reviewSummary, currentUser] = await Promise.all([
     getRelatedProducts(product),
     getCategory(product.category),
+    getReviews(product.slug),
+    getReviewSummary(product.slug),
+    getCurrentUser(),
   ]);
+  const myReview = currentUser ? await getUserReview(product.slug, currentUser.id) : null;
 
   const off = discountPercent(product);
   const saved = product.mrp - product.price;
@@ -49,6 +77,17 @@ export default async function ProductPage({
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6">
+      <ProductJsonLd product={product} />
+      <BreadcrumbJsonLd
+        items={[
+          { name: "Home", url: "/" },
+          { name: "Products", url: "/products" },
+          ...(category
+            ? [{ name: category.name, url: `/products?category=${category.slug}` }]
+            : []),
+          { name: product.name, url: `/product/${product.slug}` },
+        ]}
+      />
       {/* Breadcrumb */}
       <nav className="mb-6 flex flex-wrap items-center gap-1.5 text-sm text-white/50">
         <Link href="/" className="hover:text-brand-600">Home</Link>
@@ -176,6 +215,15 @@ export default async function ProductPage({
           </div>
         </section>
       )}
+
+      {/* Ratings & reviews */}
+      <ReviewsSection
+        productSlug={product.slug}
+        currentUser={currentUser ? { id: currentUser.id, name: currentUser.name } : null}
+        initialReviews={reviews}
+        initialSummary={reviewSummary}
+        initialMine={myReview}
+      />
 
       {/* Related */}
       {related.length > 0 && (

@@ -6,8 +6,9 @@ A modern e-commerce storefront built with **Next.js (App Router)**, **Tailwind C
 
 - 🏠 **Home page** — hero banner, shop-by-category grid, top deals (by discount), and featured products
 - 🗂️ **Product listing** (`/products`) — category filter sidebar, keyword search, and sorting (price, rating, discount)
-- 🔎 **Search** — from the navbar, across name / brand / description / category
+- 🔎 **Instant search** — the navbar search is a full **autocomplete combobox**: a debounced `/api/search/suggestions` endpoint returns matching **products** (thumbnail + price), **categories** and **brands** as you type; the empty state shows **recent searches** (localStorage) and **trending** terms derived from the live catalog. Full **keyboard navigation** (↑/↓ to move, Enter to open the highlighted result or run the search, Esc to close) with ARIA `combobox`/`listbox` semantics, matched-substring highlighting, and a server-authoritative backend shared with the listing page (regex-escaped, works with or without a database)
 - 📄 **Product detail** (`/product/[slug]`) — image, INR pricing with MRP-vs-selling discount, stock, quantity selector, add-to-cart / buy-now, spec table, related products
+- ⭐ **Ratings & reviews** — signed-in customers write a **star rating + review** on any product; the section shows an **aggregate score with a star-distribution breakdown** and the review list, rendered **server-side (SSR)** for SEO. Reviews are **server-authoritative**: rating/length validated, **one review per user per product** (enforced by a unique index), a **“Verified purchase”** badge stamped from the buyer's real order history (never client-supplied), and rate-limited writes. Authors can delete their own review; **admins moderate** all reviews (publish / hide / delete) under **Admin → Reviews**. Works with or without a database (in-memory fallback, like the rest of retail)
 - 🛒 **Cart** (`/cart`) — React Context state with **localStorage persistence**, line items with quantity controls & remove, live navbar badge, order summary (subtotal, discount, free-delivery threshold, total)
 - 🔐 **Auth** (`/login`, `/signup`, `/account`) — JWT sessions in **httpOnly cookies**, bcrypt password hashing, protected account page, navbar account menu. Works out of the box via an **in-memory user store** when no database is set (resets on restart)
 - 📦 **Checkout & orders** (`/checkout`, `/order/[id]`, `/account/orders`) — auth-gated checkout, **server-side price validation** (client prices are never trusted), address validation, order confirmation & history
@@ -19,6 +20,13 @@ A modern e-commerce storefront built with **Next.js (App Router)**, **Tailwind C
 - 🧮 **GST tax invoices** — per-product GST rate (prices GST-inclusive); every order has a printable **tax invoice** (`/order/[id]/invoice`) with seller & buyer GSTIN, per-line taxable value, and a CGST/SGST breakup
 - 🏪 **Multi-vendor marketplace** — independent vendors sell through the same storefront. Sellers apply at `/vendor/apply`, an admin approves them under **Admin → Stores**, and they get a **vendor portal** (`/vendor`) to manage their own products, orders, storefront and payouts. Shoppers see **“Sold by ⟨store⟩”** on products, browse per-seller storefronts at `/store/[slug]`, and a **`/stores` directory**. A mixed cart checks out as **one order with each line tagged to its vendor**; the platform earns a **commission** (global default + per-vendor override) and an admin settles **payouts** under **Admin → Payouts**. See [Multi-vendor marketplace](#multi-vendor-marketplace)
 - 🔒 **Security hardening** — edge `middleware.ts` gating `/admin` & `/api/admin`, in-memory **rate limiting** on auth/order endpoints, `AUTH_SECRET` **hard-fail in production**, atomic **stock decrement** (no oversell under concurrent/bulk orders), regex-escaped search, order idempotency, and baseline **security headers / CSP**
+- 🔎 **SEO & structured data** — per-page `generateMetadata` (canonical, OpenGraph, Twitter cards), a **dynamic `sitemap.xml`** built from the live catalog (products, categories, stores), a **`robots.txt`** that opens the public catalog and disallows transactional/account surfaces, and **JSON-LD** — `Organization` + `WebSite` (sitelinks search box) sitewide, and `Product` / `Offer` / `AggregateRating` / `BreadcrumbList` on every product page. Filtered/search listing permutations are `noindex` to avoid thin duplicates. Set `NEXT_PUBLIC_SITE_URL` to the real domain for correct absolute URLs
+- 📲 **PWA** — installable web-app **manifest** (standalone display, theme color, shortcuts) and a **commerce-safe service worker**: network-first HTML with a branded **offline page**, cache-first immutable build assets, and API / cart / checkout / auth traffic **never cached** (so prices, stock and authed data are never stale). Registered in **production only** so it never fights dev HMR
+- ⏳ **Loading skeletons** — route-level `loading.tsx` (Suspense) for home, listing, product, stores, wholesale catalog and account orders, using shimmer primitives that mirror each layout so navigation never flashes blank and the grid doesn't reflow when data lands
+- ♿ **Accessibility** — a **skip-to-content** link, a labelled `<main>` landmark, `prefers-reduced-motion` support, and focus-visible rings on interactive controls
+- 🧪 **Test suite** — two layers:
+  - **Vitest** unit/integration (`npm test`) covering the parts most expensive to get wrong: the **pricing/money engine** (retail vs. tiered vs. wholesale resolution, MOQ, cart totals, coupons clamped to subtotal, GST breakup — ~95% covered), input **validation** (email/password, GSTIN, monotonic volume tiers, address), the **rate limiter**, the **reviews** data layer (create/dedupe/summary/moderation), catalog **search suggestions** (incl. the API route handler), and seed queries. 64 tests run hermetically in <0.5s against the no-database path; `npm run test:coverage` for a report.
+  - **Playwright** end-to-end (`npm run test:e2e`) driving real user journeys in a headless browser — instant-search → product, add-to-cart & buy-now, signup/login, and the full **write-a-review** flow. Playwright builds and serves a **production** build with an **in-memory** data path (`MONGODB_URI=""`), so e2e is hermetic and never touches a real database. Run `npx playwright install chromium` once to fetch the browser.
 - 💾 **Data layer** — Mongoose models + a **local seed fallback** so the store renders even with no database configured
 
 ## Quick start
@@ -198,6 +206,11 @@ scripts/seed.ts           # `npm run seed` — loads catalog into MongoDB
 | `npm run start` | Run the production build                 |
 | `npm run seed`  | Seed MongoDB with the sample catalog     |
 | `npm run lint`  | Lint                                     |
+| `npm test`      | Run the Vitest unit/integration suite    |
+| `npm run test:watch` | Vitest in watch mode                |
+| `npm run test:coverage` | Run tests with a coverage report |
+| `npm run test:e2e` | Run the Playwright end-to-end suite    |
+| `npm run test:e2e:ui` | Playwright interactive UI mode      |
 
 ## Roadmap (next milestones)
 

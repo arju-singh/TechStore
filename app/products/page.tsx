@@ -11,9 +11,51 @@ import { getApprovedVendors } from "@/lib/vendors";
 import ProductCard from "@/components/ProductCard";
 import SortSelect from "@/components/SortSelect";
 
-export const metadata: Metadata = {
-  title: "All products",
-};
+export async function generateMetadata({
+  searchParams,
+}: {
+  searchParams: Promise<SearchParams>;
+}): Promise<Metadata> {
+  const sp = await searchParams;
+  const [categories, vendors] = await Promise.all([
+    getCategories(),
+    getApprovedVendors(),
+  ]);
+  const cat = sp.category ? categories.find((c) => c.slug === sp.category) : undefined;
+  const vend = sp.vendor ? vendors.find((v) => v.slug === sp.vendor) : undefined;
+
+  // Only the clean category page is canonical + indexable. Free-text search and
+  // price/bulk filter permutations are thin duplicates → noindex, and point
+  // their canonical at the base category (or /products) to consolidate signals.
+  const isFiltered =
+    Boolean(sp.search) ||
+    Boolean(sp.minPrice) ||
+    Boolean(sp.maxPrice) ||
+    sp.bulk === "1" ||
+    Boolean(sp.vendor);
+
+  const title = sp.search
+    ? `Search: ${sp.search}`
+    : vend
+    ? vend.name
+    : cat
+    ? `${cat.name}`
+    : "All products";
+
+  const description = cat
+    ? `Shop ${cat.name.toLowerCase()} at TechStore — ${cat.tagline}`
+    : "Browse the full TechStore catalog — smartphones, laptops, audio, wearables and accessories.";
+
+  const canonical = cat ? `/products?category=${cat.slug}` : "/products";
+
+  return {
+    title,
+    description,
+    alternates: { canonical },
+    robots: isFiltered ? { index: false, follow: true } : { index: true, follow: true },
+    openGraph: { title, description, url: canonical },
+  };
+}
 
 type SearchParams = {
   category?: string;

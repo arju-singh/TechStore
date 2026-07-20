@@ -8,6 +8,7 @@ const LINKS = [
   { href: "/admin/products", label: "Products", exact: false },
   { href: "/admin/pricing", label: "Bulk pricing", exact: false },
   { href: "/admin/orders", label: "Orders", exact: false },
+  { href: "/admin/reviews", label: "Reviews", exact: false },
   { href: "/admin/stores", label: "Stores", exact: false },
   { href: "/admin/payouts", label: "Payouts", exact: false },
   { href: "/admin/wholesalers", label: "Wholesalers", exact: false },
