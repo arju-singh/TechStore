@@ -4,9 +4,18 @@ import {
   applyFlashToProducts,
   getActiveFlashSale,
   getFlashPriceMap,
+  getAllFlashSales,
+  createFlashSale,
   type FlashPriceMap,
 } from "@/lib/flashSales";
+import { flashSaleStatus, type FlashSale } from "@/lib/flashSaleShared";
 import type { Product } from "@/lib/types";
+
+const NOW = 1_700_000_000_000;
+const iso = (offsetMs: number) => new Date(NOW + offsetMs).toISOString();
+const baseSale: FlashSale = {
+  id: "x", title: "Sale", enabled: true, startsAt: iso(-1000), endsAt: iso(1000), items: [],
+};
 
 function product(over: Partial<Product> = {}): Product {
   return {
@@ -88,5 +97,31 @@ describe("active sale (in-memory seed)", () => {
     for (const item of sale!.items) {
       expect(map.get(item.slug)?.discountPct).toBe(item.discountPct);
     }
+  });
+});
+
+describe("flashSaleStatus", () => {
+  it("is disabled when the sale is off, regardless of window", () => {
+    expect(flashSaleStatus({ ...baseSale, enabled: false }, NOW)).toBe("disabled");
+  });
+  it("is scheduled before it starts", () => {
+    expect(flashSaleStatus({ ...baseSale, startsAt: iso(1000), endsAt: iso(2000) }, NOW)).toBe("scheduled");
+  });
+  it("is active inside its window", () => {
+    expect(flashSaleStatus(baseSale, NOW)).toBe("active");
+  });
+  it("is ended after it closes", () => {
+    expect(flashSaleStatus({ ...baseSale, startsAt: iso(-2000), endsAt: iso(-1000) }, NOW)).toBe("ended");
+  });
+});
+
+describe("admin data layer without a database", () => {
+  it("getAllFlashSales returns [] (no DB configured in tests)", async () => {
+    expect(await getAllFlashSales()).toEqual([]);
+  });
+  it("createFlashSale fails loud without a database", async () => {
+    await expect(
+      createFlashSale({ title: "T", startsAt: iso(0), endsAt: iso(1000), enabled: true, items: [] })
+    ).rejects.toThrow(/database/i);
   });
 });
