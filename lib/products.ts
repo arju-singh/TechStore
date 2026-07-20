@@ -237,6 +237,117 @@ export async function getCategory(slug: string): Promise<Category | null> {
 }
 
 // ---------------------------------------------------------------------------
+// Instant search suggestions (autocomplete)
+// ---------------------------------------------------------------------------
+
+/** A lightweight product hit for the search dropdown (no specs/tiers payload). */
+export interface SuggestProduct {
+  slug: string;
+  name: string;
+  brand: string;
+  image: string;
+  price: number;
+  mrp: number;
+  category: string;
+}
+
+export interface SearchSuggestions {
+  query: string;
+  products: SuggestProduct[];
+  categories: { slug: string; name: string }[];
+  brands: string[];
+  /** Popular terms, shown when the query is empty. */
+  trending: string[];
+}
+
+/**
+ * Popular search terms for the empty/initial state of the search box. Derived
+ * from real catalog data (category names + the brands of featured products) so
+ * it stays meaningful as the catalog changes, rather than a hardcoded list.
+ */
+export async function getTrendingSearches(limit = 6): Promise<string[]> {
+  const [categories, featured] = await Promise.all([
+    getCategories(),
+    getFeaturedProducts(12),
+  ]);
+  const terms: string[] = [];
+  const seen = new Set<string>();
+  const add = (t: string) => {
+    const key = t.toLowerCase();
+    if (t && !seen.has(key)) {
+      seen.add(key);
+      terms.push(t);
+    }
+  };
+  // Lead with a couple of merchandised categories, then popular brands.
+  categories.slice(0, 3).forEach((c) => add(c.name));
+  featured.forEach((p) => add(p.brand));
+  return terms.slice(0, limit);
+}
+
+/**
+ * Autocomplete suggestions for a partial query: matching products, categories,
+ * and brands. Reuses the same server-authoritative product search as the
+ * listing page (regex-escaped input), so results are consistent everywhere and
+ * work with or without a database. Returns trending terms when the query is
+ * empty.
+ */
+export async function getSearchSuggestions(
+  rawQuery: string,
+  opts: { productLimit?: number } = {}
+): Promise<SearchSuggestions> {
+  const query = rawQuery.trim();
+  const productLimit = opts.productLimit ?? 6;
+
+  if (!query) {
+    return {
+      query: "",
+      products: [],
+      categories: [],
+      brands: [],
+      trending: await getTrendingSearches(),
+    };
+  }
+
+  const ql = query.toLowerCase();
+  const [matches, categories] = await Promise.all([
+    getProducts({ search: query, sort: "featured" }),
+    getCategories(),
+  ]);
+
+  const products: SuggestProduct[] = matches.slice(0, productLimit).map((p) => ({
+    slug: p.slug,
+    name: p.name,
+    brand: p.brand,
+    image: p.image,
+    price: p.price,
+    mrp: p.mrp,
+    category: p.category,
+  }));
+
+  const cats = categories
+    .filter((c) => c.name.toLowerCase().includes(ql) || c.slug.includes(ql))
+    .slice(0, 4)
+    .map((c) => ({ slug: c.slug, name: c.name }));
+
+  // Distinct brands among the matched products, ranked so brands whose own name
+  // matches the query come first, then by how many results they account for.
+  const freq = new Map<string, number>();
+  for (const p of matches) freq.set(p.brand, (freq.get(p.brand) ?? 0) + 1);
+  const brands = [...freq.entries()]
+    .sort((a, b) => {
+      const am = a[0].toLowerCase().includes(ql) ? 1 : 0;
+      const bm = b[0].toLowerCase().includes(ql) ? 1 : 0;
+      if (am !== bm) return bm - am;
+      return b[1] - a[1];
+    })
+    .slice(0, 4)
+    .map(([brand]) => brand);
+
+  return { query, products, categories: cats, brands, trending: [] };
+}
+
+// ---------------------------------------------------------------------------
 // Admin write operations
 // ---------------------------------------------------------------------------
 
