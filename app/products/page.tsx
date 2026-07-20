@@ -8,6 +8,7 @@ import {
   type SortKey,
 } from "@/lib/products";
 import { getApprovedVendors } from "@/lib/vendors";
+import { getFlashPriceMap, applyFlashToProducts } from "@/lib/flashSales";
 import ProductCard from "@/components/ProductCard";
 import SortSelect from "@/components/SortSelect";
 
@@ -91,12 +92,14 @@ export default async function ProductsPage({
   const bulk = sp.bulk === "1";
   const vendor = sp.vendor;
 
-  const [products, categories, counts, vendors] = await Promise.all([
+  const [productsRaw, categories, counts, vendors, flashMap] = await Promise.all([
     getProducts({ category, search, sort, minPrice, maxPrice, bulk, vendor }),
     getCategories(),
     getCategoryCounts(),
     getApprovedVendors(),
+    getFlashPriceMap(),
   ]);
+  const products = applyFlashToProducts(productsRaw, flashMap);
 
   const activeCategory = categories.find((c) => c.slug === category);
   const activeVendor = vendors.find((v) => v.slug === vendor);

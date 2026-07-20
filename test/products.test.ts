@@ -2,6 +2,7 @@ import { describe, it, expect } from "vitest";
 import {
   getProducts,
   getProductBySlug,
+  getProductsBySlugs,
   getCategories,
   hasBulkPricing,
 } from "@/lib/products";
@@ -60,6 +61,20 @@ describe("getProductBySlug", () => {
     expect(p).not.toBeNull();
     expect(p?.slug).toBe("macbook-pro-14");
     expect(await getProductBySlug("no-such-slug")).toBeNull();
+  });
+});
+
+describe("getProductsBySlugs", () => {
+  it("returns products in the requested order and skips misses", async () => {
+    const out = await getProductsBySlugs(["dell-xps-13", "no-such", "macbook-pro-14"]);
+    expect(out.map((p) => p.slug)).toEqual(["dell-xps-13", "macbook-pro-14"]);
+  });
+  it("returns [] for an empty request", async () => {
+    expect(await getProductsBySlugs([])).toEqual([]);
+  });
+  it("de-duplicates slugs", async () => {
+    const out = await getProductsBySlugs(["macbook-pro-14", "macbook-pro-14"]);
+    expect(out).toHaveLength(1);
   });
 });
 

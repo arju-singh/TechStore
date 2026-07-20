@@ -199,6 +199,29 @@ export async function getProductBySlug(slug: string): Promise<Product | null> {
   return doc ? toPlainProduct(doc) : null;
 }
 
+/**
+ * Fetch products for a set of slugs, returned in the SAME order as `slugs`
+ * (missing slugs are skipped). Used by the "recently viewed" rail to render fresh
+ * catalog data — price, stock, etc. — for locally-stored slugs. Capped so a
+ * crafted request can't ask for the whole catalog.
+ */
+export async function getProductsBySlugs(slugs: string[]): Promise<Product[]> {
+  const wanted = Array.from(new Set(slugs.filter(Boolean))).slice(0, 24);
+  if (wanted.length === 0) return [];
+
+  let found: Product[];
+  if (!hasDatabase) {
+    const set = new Set(wanted);
+    found = memCatalog().filter((p) => set.has(p.slug));
+  } else {
+    await connectToDatabase();
+    const docs = await ProductModel.find({ slug: { $in: wanted } }).lean();
+    found = docs.map(toPlainProduct);
+  }
+  const bySlug = new Map(found.map((p) => [p.slug, p]));
+  return wanted.map((s) => bySlug.get(s)).filter((p): p is Product => Boolean(p));
+}
+
 /** Every product belonging to a vendor (by slug), newest-relevant first. */
 export async function getProductsByVendor(vendorSlug: string): Promise<Product[]> {
   if (!vendorSlug) return [];

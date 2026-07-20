@@ -60,6 +60,18 @@ export interface Product {
   vendorSlug?: string;
   /** Denormalized vendor display name, for cheap "Sold by ⟨store⟩" rendering. */
   vendorName?: string;
+  /**
+   * Set only when an active flash sale covers this product (populated by
+   * lib/flashSales `applyFlashSale`). When present, `price` has already been
+   * overridden to `salePrice`; `originalPrice` is the pre-sale selling price and
+   * `endsAt` drives the countdown. Absent when no sale is active.
+   */
+  flashSale?: {
+    salePrice: number;
+    originalPrice: number;
+    /** ISO timestamp when the sale ends. */
+    endsAt: string;
+  };
 }
 
 export interface Category {

@@ -40,6 +40,15 @@ export default async function Navbar() {
             >
               All
             </Link>
+            <Link
+              href="/deals"
+              className="inline-flex items-center gap-1 whitespace-nowrap rounded-full px-3 py-1 font-semibold text-amber-300 transition hover:bg-amber-400/10"
+            >
+              <svg viewBox="0 0 24 24" fill="currentColor" className="h-3.5 w-3.5">
+                <path d="M13 2 4.5 13.5H11l-1 8.5 8.5-11.5H12l1-8.5Z" />
+              </svg>
+              Deals
+            </Link>
             {categories.map((c) => (
               <Link
                 key={c.slug}
