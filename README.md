@@ -83,6 +83,16 @@ and the account menu will show an **Admin panel** link.
 ADMIN_EMAILS=you@example.com,teammate@example.com
 ```
 
+> **First login = signup.** An `ADMIN_EMAILS` address has no account until
+> someone signs up with it — that first signup *is* how the admin account is
+> created (you choose the password; keep it out of git, there's no reset flow
+> yet). After that, the account menu shows **Admin panel**.
+>
+> **Managing flash sales.** Admins create timed sales at **`/admin/flash-sales`**
+> (title, window, per-product discount %, enable / disable / delete). A saved,
+> active sale overrides the built-in demo sale on the storefront and is enforced
+> at checkout; delete or disable it and the storefront falls back to the demo.
+
 ## Multi-vendor marketplace
 
 TechStore runs as a **marketplace**: alongside first-party ("house") products,
