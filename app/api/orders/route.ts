@@ -16,11 +16,8 @@ import { enforceRateLimit, rateLimit } from "@/lib/rateLimit";
 import { validateAddress } from "@/lib/validation";
 import { checkPincode } from "@/lib/delivery";
 import { validateCoupon } from "@/lib/coupons";
-import {
-  createRazorpayOrder,
-  getRazorpayKeyId,
-  razorpayConfigured,
-} from "@/lib/razorpay";
+import { razorpayConfigured } from "@/lib/razorpay";
+import { selectGateway, toMinorUnits } from "@/lib/payments";
 
 export async function GET() {
   const user = await getCurrentUser();
@@ -323,9 +320,20 @@ export async function POST(request: Request) {
     new Date().toISOString()
   );
 
-  let rzpOrder;
+  // Create the payment session via the gateway abstraction. INR routes to
+  // Razorpay today; a non-INR currency would route to Stripe with no change
+  // needed here — the order pipeline is gateway-agnostic.
+  let session;
   try {
-    rzpOrder = await createRazorpayOrder(totals.grandTotal, pending.id);
+    session = await selectGateway("INR").createSession({
+      amount: totals.grandTotal,
+      currency: "INR",
+      receipt: pending.id,
+      customer: {
+        name: addrResult.address.fullName,
+        phone: addrResult.address.phone,
+      },
+    });
   } catch (err) {
     // Payment couldn't start — release the reserved stock and cancel the order
     // so nothing stays locked behind a checkout that never completes.
@@ -340,21 +348,29 @@ export async function POST(request: Request) {
     );
   }
 
-  // Persist the Razorpay order id on our order for later cross-checking.
-  const order = (await attachRazorpayOrder(pending.id, rzpOrder.id)) ?? {
+  // Persist the gateway's order/intent id on our order for later cross-checking.
+  const gatewayOrderId =
+    session.razorpay?.orderId ?? session.stripe?.paymentIntentId ?? "";
+  const order = (await attachRazorpayOrder(pending.id, gatewayOrderId)) ?? {
     ...pending,
-    razorpayOrderId: rzpOrder.id,
+    razorpayOrderId: gatewayOrderId,
   };
 
   return NextResponse.json(
     {
       order,
-      razorpay: {
-        orderId: rzpOrder.id,
-        keyId: getRazorpayKeyId(),
-        amount: rzpOrder.amount,
-        currency: rzpOrder.currency,
-      },
+      gateway: session.gateway,
+      // Razorpay checkout fields — unchanged contract; amount in minor units.
+      razorpay: session.razorpay
+        ? {
+            orderId: session.razorpay.orderId,
+            keyId: session.razorpay.keyId,
+            amount: toMinorUnits(session.amount, session.currency),
+            currency: session.currency,
+          }
+        : undefined,
+      // Stripe checkout fields, present when the payment routed to Stripe.
+      stripe: session.stripe,
     },
     { status: 201 }
   );
