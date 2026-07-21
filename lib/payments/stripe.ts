@@ -86,9 +86,31 @@ export function verifyStripeWebhookSignature(
 }
 
 /**
- * Stripe gateway (international). Creates a PaymentIntent and verifies via intent
- * status; webhooks are verified with `verifyStripeWebhookSignature`. Uses the raw
- * REST API over fetch — no SDK dependency, matching the Razorpay client.
+ * Given a *verified* Stripe webhook event, return the order id (`metadata.receipt`)
+ * that the event confirms as paid, or null to ignore it. Hosted Checkout fires
+ * `checkout.session.completed`, which we additionally require to be
+ * `payment_status: "paid"` (async payment methods can complete the session while
+ * still unpaid). A direct `payment_intent.succeeded` is already terminal. Pure —
+ * signature verification is the caller's responsibility.
+ */
+export function paidReceiptFromStripeEvent(event: unknown): string | null {
+  if (!event || typeof event !== "object") return null;
+  const e = event as { type?: string; data?: { object?: any } };
+  const obj = e.data?.object ?? {};
+  const receipt = obj?.metadata?.receipt;
+  if (typeof receipt !== "string" || !receipt) return null;
+  if (e.type === "payment_intent.succeeded") return receipt;
+  if (e.type === "checkout.session.completed" && obj?.payment_status === "paid") {
+    return receipt;
+  }
+  return null;
+}
+
+/**
+ * Stripe gateway (international). Creates a hosted Checkout Session and verifies
+ * via intent status; webhooks are verified with `verifyStripeWebhookSignature`.
+ * Uses the raw REST API over fetch — no SDK dependency, matching the Razorpay
+ * client.
  */
 export class StripeGateway implements PaymentGateway {
   readonly id = "stripe" as const;
@@ -105,22 +127,36 @@ export class StripeGateway implements PaymentGateway {
 
   async createSession(input: CreatePaymentInput): Promise<PaymentSession> {
     if (!this.isConfigured()) throw new Error("Stripe is not configured.");
-    const intent = await stripeFetch("/payment_intents", "POST", {
-      amount: toMinorUnits(input.amount, input.currency),
-      currency: input.currency.toLowerCase(),
-      automatic_payment_methods: { enabled: true },
-      receipt_email: input.customer?.email,
+    if (!input.returnUrls) {
+      throw new Error("Stripe Checkout needs success/cancel return URLs.");
+    }
+    // Hosted Checkout Session — the shopper is redirected to Stripe's PCI-hosted
+    // page (no card data touches us, no Stripe.js needed). `receipt` is stamped
+    // on both the session and the payment intent so the webhook can reconcile.
+    const session = await stripeFetch("/checkout/sessions", "POST", {
+      mode: "payment",
+      success_url: input.returnUrls.success,
+      cancel_url: input.returnUrls.cancel,
+      customer_email: input.customer?.email,
+      client_reference_id: input.receipt,
       metadata: { receipt: input.receipt },
+      payment_intent_data: { metadata: { receipt: input.receipt } },
+      line_items: [
+        {
+          quantity: 1,
+          price_data: {
+            currency: input.currency.toLowerCase(),
+            unit_amount: toMinorUnits(input.amount, input.currency),
+            product_data: { name: `TechStore order ${input.receipt.slice(-8)}` },
+          },
+        },
+      ],
     });
     return {
       gateway: this.id,
       currency: input.currency,
       amount: input.amount,
-      stripe: {
-        clientSecret: intent.client_secret,
-        publishableKey: PUBLISHABLE_KEY,
-        paymentIntentId: intent.id,
-      },
+      stripe: { checkoutUrl: session.url },
     };
   }
 

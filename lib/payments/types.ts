@@ -22,18 +22,22 @@ export interface CreatePaymentInput {
   /** Our internal order id, echoed back for reconciliation. */
   receipt: string;
   customer?: { name?: string; email?: string; phone?: string };
+  /** Where a redirect-based gateway (Stripe Checkout) returns the shopper. */
+  returnUrls?: { success: string; cancel: string };
 }
 
 /**
  * What the browser needs to launch checkout. Contains only publishable values
- * (order/intent ids, publishable keys, client secrets) — never a secret key.
+ * (order ids, publishable keys, redirect URLs) — never a secret key.
  */
 export interface PaymentSession {
   gateway: GatewayId;
   currency: Currency;
   amount: number;
+  /** Razorpay: launch the embedded checkout widget with these. */
   razorpay?: { orderId: string; keyId: string };
-  stripe?: { clientSecret: string; publishableKey: string; paymentIntentId: string };
+  /** Stripe: redirect the browser to this hosted Checkout page. */
+  stripe?: { checkoutUrl: string };
 }
 
 /** Gateway-specific proof of a completed payment, verified server-side. */

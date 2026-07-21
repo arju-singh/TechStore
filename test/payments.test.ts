@@ -1,7 +1,10 @@
 import { describe, it, expect } from "vitest";
 import crypto from "node:crypto";
 import { chooseGatewayId, toMinorUnits } from "@/lib/payments/types";
-import { verifyStripeWebhookSignature } from "@/lib/payments/stripe";
+import {
+  verifyStripeWebhookSignature,
+  paidReceiptFromStripeEvent,
+} from "@/lib/payments/stripe";
 import { gatewayAvailability, selectGateway, configuredGateways } from "@/lib/payments";
 
 describe("chooseGatewayId (currency routing)", () => {
@@ -59,6 +62,41 @@ describe("verifyStripeWebhookSignature", () => {
     expect(verifyStripeWebhookSignature(payload, `t=${t}`, secret, { now })).toBe(false);
     expect(verifyStripeWebhookSignature(payload, "", secret, { now })).toBe(false);
     expect(verifyStripeWebhookSignature(payload, `t=${t},v1=abc`, "", { now })).toBe(false);
+  });
+});
+
+describe("paidReceiptFromStripeEvent", () => {
+  const mk = (type: string, object: any) => ({ type, data: { object } });
+
+  it("confirms a paid Checkout Session, returning the order receipt", () => {
+    const e = mk("checkout.session.completed", {
+      payment_status: "paid",
+      metadata: { receipt: "order_123" },
+    });
+    expect(paidReceiptFromStripeEvent(e)).toBe("order_123");
+  });
+  it("ignores a completed-but-unpaid Checkout Session", () => {
+    const e = mk("checkout.session.completed", {
+      payment_status: "unpaid",
+      metadata: { receipt: "order_123" },
+    });
+    expect(paidReceiptFromStripeEvent(e)).toBeNull();
+  });
+  it("confirms a succeeded PaymentIntent", () => {
+    const e = mk("payment_intent.succeeded", { metadata: { receipt: "order_9" } });
+    expect(paidReceiptFromStripeEvent(e)).toBe("order_9");
+  });
+  it("ignores unrelated event types and missing receipts", () => {
+    expect(
+      paidReceiptFromStripeEvent(
+        mk("payment_intent.payment_failed", { metadata: { receipt: "order_9" } })
+      )
+    ).toBeNull();
+    expect(
+      paidReceiptFromStripeEvent(mk("checkout.session.completed", { payment_status: "paid" }))
+    ).toBeNull();
+    expect(paidReceiptFromStripeEvent(null)).toBeNull();
+    expect(paidReceiptFromStripeEvent({})).toBeNull();
   });
 });
 

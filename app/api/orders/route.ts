@@ -16,8 +16,7 @@ import { enforceRateLimit, rateLimit } from "@/lib/rateLimit";
 import { validateAddress } from "@/lib/validation";
 import { checkPincode } from "@/lib/delivery";
 import { validateCoupon } from "@/lib/coupons";
-import { razorpayConfigured } from "@/lib/razorpay";
-import { selectGateway, toMinorUnits } from "@/lib/payments";
+import { getGateway, toMinorUnits, type GatewayId } from "@/lib/payments";
 
 export async function GET() {
   const user = await getCurrentUser();
@@ -78,10 +77,10 @@ export async function POST(request: Request) {
     );
   }
 
-  // Payment method — COD, online (Razorpay), Net-30 credit or a quote request.
-  // Credit & quote are B2B-only and gated on the session's wholesaler status.
+  // Payment method — COD, online (Razorpay or Stripe), Net-30 credit or a quote
+  // request. Credit & quote are B2B-only, gated on the session's wholesaler status.
   const paymentMethod = body?.paymentMethod ?? "cod";
-  const VALID_METHODS = ["cod", "razorpay", "credit", "quote"];
+  const VALID_METHODS = ["cod", "razorpay", "stripe", "credit", "quote"];
   if (!VALID_METHODS.includes(paymentMethod)) {
     return NextResponse.json(
       { error: "Unsupported payment method." },
@@ -95,9 +94,10 @@ export async function POST(request: Request) {
       { status: 403 }
     );
   }
-  if (paymentMethod === "razorpay" && !razorpayConfigured) {
+  const isOnlineMethod = paymentMethod === "razorpay" || paymentMethod === "stripe";
+  if (isOnlineMethod && !getGateway(paymentMethod as GatewayId).isConfigured()) {
     return NextResponse.json(
-      { error: "Online payment is not configured. Please use Cash on Delivery." },
+      { error: "This online payment method is not configured. Please use Cash on Delivery." },
       { status: 400 }
     );
   }
@@ -303,7 +303,12 @@ export async function POST(request: Request) {
     return NextResponse.json({ order }, { status: 201 });
   }
 
-  // Razorpay: create our pending order first so we have an id for the receipt.
+  // Online payment (Razorpay or Stripe): create our pending order first so we
+  // have an id to use as the gateway receipt. The order becomes "paid" only
+  // after the gateway confirms — Razorpay via /api/payments/verify, Stripe via
+  // the checkout webhook. The gateway is whichever online method the shopper
+  // chose; both are charged in the store's native currency (INR).
+  const gatewayId = paymentMethod as GatewayId; // "razorpay" | "stripe"
   const pending = await createOrder(
     {
       user: user.id,
@@ -314,24 +319,31 @@ export async function POST(request: Request) {
       total: totals.grandTotal,
       couponCode,
       couponDiscount,
-      paymentMethod: "razorpay",
+      paymentMethod: gatewayId,
       status: "pending",
     },
     new Date().toISOString()
   );
 
-  // Create the payment session via the gateway abstraction. INR routes to
-  // Razorpay today; a non-INR currency would route to Stripe with no change
-  // needed here — the order pipeline is gateway-agnostic.
+  // Where Stripe's hosted Checkout returns the shopper (Razorpay ignores these).
+  const siteUrl = (
+    process.env.NEXT_PUBLIC_SITE_URL || new URL(request.url).origin
+  ).replace(/\/+$/, "");
+
   let session;
   try {
-    session = await selectGateway("INR").createSession({
+    session = await getGateway(gatewayId).createSession({
       amount: totals.grandTotal,
       currency: "INR",
       receipt: pending.id,
       customer: {
         name: addrResult.address.fullName,
         phone: addrResult.address.phone,
+        email: user.email,
+      },
+      returnUrls: {
+        success: `${siteUrl}/order/${pending.id}?placed=1`,
+        cancel: `${siteUrl}/checkout?cancelled=1`,
       },
     });
   } catch (err) {
@@ -348,9 +360,9 @@ export async function POST(request: Request) {
     );
   }
 
-  // Persist the gateway's order/intent id on our order for later cross-checking.
-  const gatewayOrderId =
-    session.razorpay?.orderId ?? session.stripe?.paymentIntentId ?? "";
+  // Persist the gateway's order id (Razorpay) for later signature cross-checking.
+  // Stripe reconciles by the `receipt` metadata on its webhook, so it has none.
+  const gatewayOrderId = session.razorpay?.orderId ?? "";
   const order = (await attachRazorpayOrder(pending.id, gatewayOrderId)) ?? {
     ...pending,
     razorpayOrderId: gatewayOrderId,
@@ -369,7 +381,7 @@ export async function POST(request: Request) {
             currency: session.currency,
           }
         : undefined,
-      // Stripe checkout fields, present when the payment routed to Stripe.
+      // Stripe: the hosted Checkout URL the browser redirects to.
       stripe: session.stripe,
     },
     { status: 201 }
