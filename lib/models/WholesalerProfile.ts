@@ -16,17 +16,22 @@ const WholesaleAddressSchema = new Schema(
 );
 
 /**
- * Metadata for an uploaded verification document. The binary lives on disk under
- * WHOLESALE_UPLOAD_DIR; only its metadata is stored here (real file, no fakery).
+ * Metadata for an uploaded verification document. Only metadata is stored here;
+ * the binary lives on Cloudinary (private/authenticated) in production, or on
+ * local disk under WHOLESALE_UPLOAD_DIR in dev — see `storage`.
  */
 const WholesaleDocumentSchema = new Schema(
   {
     docType: { type: String, required: true }, // gst_certificate | business_license | id_proof | ...
     originalName: { type: String, required: true },
-    storedName: { type: String, required: true }, // opaque on-disk filename
+    storedName: { type: String, required: true }, // disk filename OR Cloudinary public id
     mimeType: { type: String, required: true },
     size: { type: Number, required: true },
     uploadedAt: { type: String, required: true },
+    // Where the bytes live. Legacy records (absent) → disk.
+    storage: { type: String, enum: ["disk", "cloudinary"], default: "disk" },
+    resourceType: { type: String }, // Cloudinary: "image" | "raw"
+    format: { type: String }, // Cloudinary: extension
   },
   { _id: true }
 );

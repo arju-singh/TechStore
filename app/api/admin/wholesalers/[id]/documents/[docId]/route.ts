@@ -30,7 +30,7 @@ export async function GET(
 
   let buf: Buffer;
   try {
-    buf = await readWholesaleDocument(doc.storedName);
+    buf = await readWholesaleDocument(doc);
   } catch {
     return NextResponse.json(
       { error: "The stored file could not be read." },

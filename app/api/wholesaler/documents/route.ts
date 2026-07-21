@@ -19,9 +19,10 @@ const DOC_TYPES = new Set([
 ]);
 
 /**
- * Upload a real verification document (multipart/form-data). The file is written
- * to disk (lib/uploads) and its metadata appended to the caller's profile. The
- * applicant must already have a profile.
+ * Upload a real verification document (multipart/form-data). The file is stored
+ * via lib/uploads (Cloudinary private assets in production, local disk in dev)
+ * and its metadata appended to the caller's profile. The applicant must already
+ * have a profile.
  */
 export async function POST(request: Request) {
   const limited = enforceRateLimit(request, "wholesaler-docs", 30, 60 * 60 * 1000);
