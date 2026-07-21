@@ -1,16 +1,16 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  // This project lives on an iCloud-synced Desktop. iCloud races with the
-  // build and creates corrupt "foo 2" conflict copies inside the output dir,
-  // which breaks chunk loading. A folder whose name ends in ".nosync" is
-  // excluded from iCloud sync, so we build into one to keep the output clean.
-  distDir: "build.nosync/.next",
+  // Default build output dir (`.next`). Vercel's Next.js builder expects this;
+  // a custom distDir can break its output detection. (The project is no longer
+  // on iCloud, so the old `build.nosync/.next` workaround is unnecessary.)
   images: {
     remotePatterns: [
       { protocol: "https", hostname: "images.unsplash.com" },
       { protocol: "https", hostname: "picsum.photos" },
       // Real product photos for the catalog (swap for your own image host).
       { protocol: "https", hostname: "cdn.dummyjson.com" },
+      // Cloudinary CDN — product images/banners/thumbnails (added for deploy).
+      { protocol: "https", hostname: "res.cloudinary.com" },
     ],
   },
   // Baseline security headers applied to every response.
@@ -26,11 +26,11 @@ const nextConfig = {
       : "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://checkout.razorpay.com";
     const csp = [
       "default-src 'self'",
-      "img-src 'self' data: https://images.unsplash.com https://picsum.photos https://cdn.dummyjson.com",
+      "img-src 'self' data: https://images.unsplash.com https://picsum.photos https://cdn.dummyjson.com https://res.cloudinary.com",
       scriptSrc,
       "style-src 'self' 'unsafe-inline'",
       "font-src 'self' data:",
-      "connect-src 'self' https://api.razorpay.com https://lumberjack.razorpay.com",
+      "connect-src 'self' https://api.razorpay.com https://lumberjack.razorpay.com https://api.cloudinary.com",
       "frame-src https://api.razorpay.com https://checkout.razorpay.com",
       "frame-ancestors 'none'",
       "base-uri 'self'",
