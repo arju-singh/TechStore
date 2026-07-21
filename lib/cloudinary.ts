@@ -106,6 +106,81 @@ export async function uploadRemoteImage(
   return { publicId: (json as any).public_id, secureUrl: (json as any).secure_url };
 }
 
+/**
+ * Upload a raw buffer (e.g. a KYC document) to Cloudinary. Defaults to
+ * `type: "authenticated"` — a PRIVATE asset that is NOT publicly reachable even
+ * with the URL, and can only be delivered via a signed URL. PDFs use
+ * resource_type `raw`; images use `image`.
+ */
+export async function uploadBuffer(
+  buffer: Buffer,
+  mimeType: string,
+  opts: { subfolder: string; resourceType?: "image" | "raw"; type?: "upload" | "authenticated" }
+): Promise<{ publicId: string; resourceType: string; format: string; bytes: number }> {
+  if (!cloudinaryConfigured) throw new Error("Cloudinary is not configured.");
+  const folder = `${CLOUDINARY_ROOT}/${opts.subfolder}`.replace(/[^a-zA-Z0-9/_-]/g, "");
+  const resourceType = opts.resourceType ?? "image";
+  const type = opts.type ?? "authenticated";
+  const timestamp = Math.floor(Date.now() / 1000);
+  const signature = cloudinarySignature({ folder, timestamp, type }, API_SECRET);
+
+  const form = new FormData();
+  form.append("file", new Blob([new Uint8Array(buffer)], { type: mimeType }));
+  form.append("api_key", API_KEY);
+  form.append("timestamp", String(timestamp));
+  form.append("folder", folder);
+  form.append("type", type);
+  form.append("signature", signature);
+
+  const res = await fetch(
+    `https://api.cloudinary.com/v1_1/${CLOUD_NAME}/${resourceType}/upload`,
+    { method: "POST", body: form }
+  );
+  const json = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    throw new Error((json as any)?.error?.message || `Cloudinary upload failed (${res.status})`);
+  }
+  return {
+    publicId: (json as any).public_id,
+    resourceType: (json as any).resource_type,
+    format: (json as any).format ?? "",
+    bytes: (json as any).bytes ?? buffer.length,
+  };
+}
+
+/** URL-safe base64 SHA-1 signature (first 8 chars), for signed delivery URLs. */
+function urlSignature(toSign: string): string {
+  return crypto
+    .createHash("sha1")
+    .update(toSign + API_SECRET)
+    .digest("base64")
+    .replace(/\+/g, "-")
+    .replace(/\//g, "_")
+    .replace(/=+$/, "")
+    .slice(0, 8);
+}
+
+/**
+ * Fetch a PRIVATE (authenticated) asset's bytes server-side via a signed
+ * delivery URL, so the admin route can stream it without ever exposing a public
+ * URL. NOTE: the signed-URL scheme is implemented to Cloudinary's spec but is
+ * unverified without live keys — confirm once CLOUDINARY_* are set.
+ */
+export async function fetchAuthenticatedAsset(
+  publicId: string,
+  resourceType: "image" | "raw",
+  format?: string
+): Promise<Buffer> {
+  if (!cloudinaryConfigured) throw new Error("Cloudinary is not configured.");
+  // For images the format is appended to the delivered path; raw public_ids
+  // already include their extension.
+  const path = format && resourceType === "image" ? `${publicId}.${format}` : publicId;
+  const url = `https://res.cloudinary.com/${CLOUD_NAME}/${resourceType}/authenticated/s--${urlSignature(path)}--/${path}`;
+  const res = await fetch(url);
+  if (!res.ok) throw new Error(`Cloudinary fetch failed (${res.status})`);
+  return Buffer.from(await res.arrayBuffer());
+}
+
 /** Delete a stored asset by publicId (signed admin call). */
 export async function deleteAsset(publicId: string): Promise<boolean> {
   if (!cloudinaryConfigured) throw new Error("Cloudinary is not configured.");

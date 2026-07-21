@@ -53,6 +53,10 @@ export interface WholesaleDocument {
   mimeType: string;
   size: number;
   uploadedAt: string;
+  /** Where the bytes live. Absent on legacy records → treated as "disk". */
+  storage?: "disk" | "cloudinary";
+  resourceType?: string;
+  format?: string;
 }
 
 export interface WholesalerProfile {
@@ -128,6 +132,9 @@ function docToProfile(doc: any): WholesalerProfile {
           mimeType: d.mimeType,
           size: Number(d.size) || 0,
           uploadedAt: d.uploadedAt ?? "",
+          storage: d.storage === "cloudinary" ? "cloudinary" : "disk",
+          resourceType: d.resourceType ?? "",
+          format: d.format ?? "",
         }))
       : [],
     status: (doc.status ?? "pending") as WholesalerStatus,
