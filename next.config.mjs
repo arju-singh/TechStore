@@ -3,6 +3,10 @@ const nextConfig = {
   // Default build output dir (`.next`). Vercel's Next.js builder expects this;
   // a custom distDir can break its output detection. (The project is no longer
   // on iCloud, so the old `build.nosync/.next` workaround is unnecessary.)
+  //
+  // firebase-admin uses Node built-ins + optional native deps; keep it external
+  // so Next doesn't try to bundle it into the serverless functions.
+  serverExternalPackages: ["firebase-admin"],
   images: {
     remotePatterns: [
       { protocol: "https", hostname: "images.unsplash.com" },
@@ -30,7 +34,9 @@ const nextConfig = {
       scriptSrc,
       "style-src 'self' 'unsafe-inline'",
       "font-src 'self' data:",
-      "connect-src 'self' https://api.razorpay.com https://lumberjack.razorpay.com https://api.cloudinary.com",
+      // Firebase Auth (client SDK) talks to Google's identity endpoints; the
+      // project's authDomain (*.firebaseapp.com) covers auth handler traffic.
+      "connect-src 'self' https://api.razorpay.com https://lumberjack.razorpay.com https://api.cloudinary.com https://identitytoolkit.googleapis.com https://securetoken.googleapis.com https://*.firebaseapp.com",
       "frame-src https://api.razorpay.com https://checkout.razorpay.com",
       "frame-ancestors 'none'",
       "base-uri 'self'",

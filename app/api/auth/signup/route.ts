@@ -1,10 +1,23 @@
 import { NextResponse } from "next/server";
 import { createUser, findUserByEmail } from "@/lib/users";
-import { createSession, hashPassword, publicUserWithRole } from "@/lib/auth";
+import {
+  createSession,
+  hashPassword,
+  publicUserWithRole,
+  firebaseAuthEnabled,
+} from "@/lib/auth";
 import { validateEmail, validateName, validatePassword } from "@/lib/validation";
 import { enforceRateLimit } from "@/lib/rateLimit";
 
 export async function POST(request: Request) {
+  // When Firebase auth is live, account creation happens client-side via the
+  // Firebase SDK + /api/auth/session — this legacy endpoint is disabled.
+  if (firebaseAuthEnabled) {
+    return NextResponse.json(
+      { error: "Please create your account with the updated sign-up." },
+      { status: 400 }
+    );
+  }
   // Throttle mass account creation / email-enumeration probing.
   const limited = enforceRateLimit(request, "signup", 5, 60 * 60 * 1000);
   if (limited) return limited;

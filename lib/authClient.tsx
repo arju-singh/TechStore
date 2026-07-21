@@ -7,6 +7,7 @@ import {
   useEffect,
   useState,
 } from "react";
+import { firebaseClientConfigured } from "@/lib/firebaseConfig";
 
 export interface AuthUser {
   id: string;
@@ -61,12 +62,47 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const login = useCallback(async (email: string, password: string) => {
+    // Firebase path: sign in client-side, then exchange the ID token for a
+    // server session cookie. Falls back to the legacy password endpoint when
+    // Firebase isn't configured.
+    if (firebaseClientConfigured) {
+      const { firebaseSignIn, mapFirebaseAuthError } = await import(
+        "@/lib/firebaseClient"
+      );
+      let idToken: string;
+      try {
+        idToken = await firebaseSignIn(email, password);
+      } catch (err) {
+        throw new Error(mapFirebaseAuthError(err));
+      }
+      const { user } = await postJson("/api/auth/session", { idToken });
+      setUser(user);
+      return;
+    }
     const { user } = await postJson("/api/auth/login", { email, password });
     setUser(user);
   }, []);
 
   const signup = useCallback(
     async (name: string, email: string, password: string) => {
+      if (firebaseClientConfigured) {
+        // Keep the app's 8-char policy even though Firebase's own minimum is 6.
+        if (password.length < 8) {
+          throw new Error("Password must be at least 8 characters.");
+        }
+        const { firebaseSignUp, mapFirebaseAuthError } = await import(
+          "@/lib/firebaseClient"
+        );
+        let idToken: string;
+        try {
+          idToken = await firebaseSignUp(name, email, password);
+        } catch (err) {
+          throw new Error(mapFirebaseAuthError(err));
+        }
+        const { user } = await postJson("/api/auth/session", { idToken });
+        setUser(user);
+        return;
+      }
       const { user } = await postJson("/api/auth/signup", {
         name,
         email,
@@ -78,6 +114,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   );
 
   const logout = useCallback(async () => {
+    if (firebaseClientConfigured) {
+      try {
+        const { firebaseSignOut } = await import("@/lib/firebaseClient");
+        await firebaseSignOut();
+      } catch {
+        // Ignore client sign-out errors — we still clear the server cookie below.
+      }
+    }
     await fetch("/api/auth/logout", { method: "POST" });
     setUser(null);
   }, []);
