@@ -16,6 +16,10 @@ import { getOrderById, updateOrderStatus } from "@/lib/orders";
  * always 200 on a handled/ignored event so Stripe doesn't retry unnecessarily.
  */
 export const dynamic = "force-dynamic";
+// Signature verification uses `node:crypto`, so this route must run on the Node
+// runtime (not Edge). Pin it explicitly and give reconciliation headroom.
+export const runtime = "nodejs";
+export const maxDuration = 30;
 
 /** Marks the order referenced by `metadata.receipt` paid, tolerating any error. */
 async function markReceiptPaid(receipt: string | undefined) {
