@@ -13,8 +13,10 @@ test("flash sale page shows a live countdown and discounted products", async ({ 
 
 test("a product page surfaces a live flash-sale countdown", async ({ page }) => {
   await page.goto("/product/iphone-13-pro");
-  await expect(page.getByText(/Flash sale/i)).toBeVisible();
-  await expect(page.getByText(/was ₹/)).toBeVisible();
+  // The flash-sale badge nests text inside a wrapper, so the label and "was ₹"
+  // can each resolve to more than one element — assert the first, like the timer.
+  await expect(page.getByText(/Flash sale/i).first()).toBeVisible();
+  await expect(page.getByText(/was ₹/).first()).toBeVisible();
   await expect(page.getByRole("timer").first()).toBeVisible();
 });
 
