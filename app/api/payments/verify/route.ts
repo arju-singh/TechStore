@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/auth";
 import { getOrderById, markOrderPaid } from "@/lib/orders";
-import { verifyPaymentSignature } from "@/lib/razorpay";
+import { getGateway } from "@/lib/payments";
 
 export async function POST(request: Request) {
   const user = await getCurrentUser();
@@ -47,13 +47,15 @@ export async function POST(request: Request) {
     );
   }
 
-  const valid = verifyPaymentSignature({
-    razorpayOrderId: razorpay_order_id,
-    razorpayPaymentId: razorpay_payment_id,
-    signature: razorpay_signature,
+  const result = await getGateway("razorpay").verify({
+    razorpay: {
+      orderId: razorpay_order_id,
+      paymentId: razorpay_payment_id,
+      signature: razorpay_signature,
+    },
   });
 
-  if (!valid) {
+  if (!result.ok) {
     return NextResponse.json(
       { error: "Payment verification failed." },
       { status: 400 }
