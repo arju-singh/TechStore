@@ -40,7 +40,11 @@ function loadRazorpayScript(): Promise<void> {
   });
 }
 
-export default function CheckoutView() {
+export default function CheckoutView({
+  gateways,
+}: {
+  gateways: { razorpay: boolean; stripe: boolean };
+}) {
   const router = useRouter();
   const { user, loading: authLoading } = useAuth();
   const { items, pricedItems, totals, ready, clear, couponCode, hasBlockingIssue } =
@@ -48,7 +52,9 @@ export default function CheckoutView() {
 
   const isWholesaler = Boolean(user?.isWholesaler);
   const [address, setAddress] = useState(INITIAL_ADDRESS);
-  const [payment, setPayment] = useState<"cod" | "razorpay" | "credit">("cod");
+  const [payment, setPayment] = useState<"cod" | "razorpay" | "stripe" | "credit">(
+    "cod"
+  );
   const [poNumber, setPoNumber] = useState("");
   const [placing, setPlacing] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -78,12 +84,18 @@ export default function CheckoutView() {
     };
   }, [address.pincode]);
 
-  // If the pincode is COD-only-unavailable, force online payment.
+  // If the pincode is COD-unavailable, fall back to whichever online gateway is
+  // configured (Razorpay preferred for India, else Stripe).
   useEffect(() => {
     if (delivery && !delivery.codAvailable && payment === "cod") {
-      setPayment("razorpay");
+      const fallback = gateways.razorpay
+        ? "razorpay"
+        : gateways.stripe
+        ? "stripe"
+        : null;
+      if (fallback) setPayment(fallback);
     }
-  }, [delivery, payment]);
+  }, [delivery, payment, gateways]);
 
   // Prefill the recipient name from the account.
   useEffect(() => {
@@ -120,7 +132,9 @@ export default function CheckoutView() {
       setAddress((a) => ({ ...a, [field]: e.target.value }));
   }
 
-  async function submitOrder(method: "cod" | "razorpay" | "credit" | "quote") {
+  async function submitOrder(
+    method: "cod" | "razorpay" | "stripe" | "credit" | "quote"
+  ) {
     setError(null);
     setPlacing(true);
     try {
@@ -143,6 +157,16 @@ export default function CheckoutView() {
       const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(data?.error || "Could not place order.");
 
+      // Stripe hosted Checkout: the order is pending; hand off to Stripe's page.
+      // It's marked paid by the webhook, and the shopper returns to the order.
+      if (method === "stripe") {
+        if (!data.stripe?.checkoutUrl) {
+          throw new Error("Could not start card payment. Please try again.");
+        }
+        clear();
+        window.location.href = data.stripe.checkoutUrl;
+        return;
+      }
       // COD / credit / quote all complete server-side; only razorpay needs the modal.
       if (method !== "razorpay") {
         clear();
@@ -264,13 +288,24 @@ export default function CheckoutView() {
           <section className="rounded-xl border border-white/10 bg-white/[0.02] p-6">
             <h2 className="text-lg font-bold text-white">Payment method</h2>
             <div className="mt-4 space-y-3">
-              <PaymentOption
-                value="razorpay"
-                checked={payment === "razorpay"}
-                onSelect={() => setPayment("razorpay")}
-                title="Pay online"
-                subtitle="UPI, cards, netbanking & wallets via Razorpay (test mode)."
-              />
+              {gateways.razorpay && (
+                <PaymentOption
+                  value="razorpay"
+                  checked={payment === "razorpay"}
+                  onSelect={() => setPayment("razorpay")}
+                  title="Pay online — UPI & more"
+                  subtitle="UPI, cards, netbanking & wallets via Razorpay."
+                />
+              )}
+              {gateways.stripe && (
+                <PaymentOption
+                  value="stripe"
+                  checked={payment === "stripe"}
+                  onSelect={() => setPayment("stripe")}
+                  title="Pay by card"
+                  subtitle="Credit or debit card via Stripe's secure checkout."
+                />
+              )}
               <PaymentOption
                 value="cod"
                 checked={payment === "cod"}
@@ -368,7 +403,7 @@ export default function CheckoutView() {
             >
               {placing
                 ? "Processing…"
-                : payment === "razorpay"
+                : payment === "razorpay" || payment === "stripe"
                 ? `Pay ${formatINR(totals.grandTotal)}`
                 : payment === "credit"
                 ? "Place order on credit"

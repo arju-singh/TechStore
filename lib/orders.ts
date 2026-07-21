@@ -43,7 +43,7 @@ export type OrderStatus =
   | "quoted"
   | "credit_invoiced";
 
-export type PaymentMethod = "cod" | "razorpay" | "credit" | "quote";
+export type PaymentMethod = "cod" | "razorpay" | "stripe" | "credit" | "quote";
 
 export interface Order {
   id: string;
