@@ -1,9 +1,22 @@
 import { NextResponse } from "next/server";
 import { findUserByEmail } from "@/lib/users";
-import { createSession, verifyPassword, enrichPublicUser } from "@/lib/auth";
+import {
+  createSession,
+  verifyPassword,
+  enrichPublicUser,
+  firebaseAuthEnabled,
+} from "@/lib/auth";
 import { enforceRateLimit } from "@/lib/rateLimit";
 
 export async function POST(request: Request) {
+  // When Firebase auth is live, password login is handled client-side via the
+  // Firebase SDK + /api/auth/session — this legacy endpoint is disabled.
+  if (firebaseAuthEnabled) {
+    return NextResponse.json(
+      { error: "Please sign in with the updated login." },
+      { status: 400 }
+    );
+  }
   // Throttle credential-stuffing / brute force: 10 attempts / 5 min per client.
   const limited = enforceRateLimit(request, "login", 10, 5 * 60 * 1000);
   if (limited) return limited;

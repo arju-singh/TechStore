@@ -9,6 +9,8 @@ export interface StoredUser {
   email: string;
   passwordHash: string;
   role: UserRole;
+  /** Firebase Auth UID, present once the account is linked to a Firebase user. */
+  firebaseUid?: string;
 }
 
 /**
@@ -43,8 +45,9 @@ function docToStoredUser(doc: any): StoredUser {
     id: String(doc._id),
     name: doc.name,
     email: doc.email,
-    passwordHash: doc.passwordHash,
+    passwordHash: doc.passwordHash ?? "",
     role: doc.role,
+    firebaseUid: doc.firebaseUid ?? undefined,
   };
 }
 
@@ -91,6 +94,85 @@ export async function findUserById(id: string): Promise<StoredUser | null> {
   const doc = await UserModel.findById(id).lean<any>().catch(() => null);
   if (!doc) return null;
   return docToStoredUser(doc);
+}
+
+export async function findUserByFirebaseUid(
+  uid: string
+): Promise<StoredUser | null> {
+  if (!uid) return null;
+  if (!hasDatabase) {
+    for (const u of memUsers.values()) if (u.firebaseUid === uid) return u;
+    return null;
+  }
+  await connectToDatabase();
+  const doc = await UserModel.findOne({ firebaseUid: uid })
+    .lean<any>()
+    .catch(() => null);
+  return doc ? docToStoredUser(doc) : null;
+}
+
+/**
+ * Resolve the app user for a VERIFIED Firebase identity, creating or linking as
+ * needed (the link-by-email migration path):
+ *   1. a row already linked to this uid → return it;
+ *   2. a row with the same email → attach the uid and return it, so legacy
+ *      accounts keep their id, orders, and roles;
+ *   3. otherwise create a fresh, password-less row for this Firebase user.
+ * The returned `id` is always our own id — the stable key the rest of the app
+ * (orders, vendor, wholesaler) is keyed by. The Firebase uid is auth-only.
+ */
+export async function linkOrCreateFirebaseUser(input: {
+  uid: string;
+  email: string;
+  name?: string;
+}): Promise<StoredUser> {
+  const { uid } = input;
+  const email = normalizeEmail(input.email);
+  const name = (input.name || email || "User").trim();
+
+  const linked = await findUserByFirebaseUid(uid);
+  if (linked) return linked;
+
+  const byEmail = email ? await findUserByEmail(email) : null;
+  if (byEmail) {
+    if (byEmail.firebaseUid === uid) return byEmail;
+    if (!hasDatabase) {
+      byEmail.firebaseUid = uid;
+      memUsers.set(byEmail.email, byEmail);
+      return byEmail;
+    }
+    await connectToDatabase();
+    const updated = await UserModel.findByIdAndUpdate(
+      byEmail.id,
+      { firebaseUid: uid },
+      { new: true }
+    )
+      .lean<any>()
+      .catch(() => null);
+    return updated ? docToStoredUser(updated) : { ...byEmail, firebaseUid: uid };
+  }
+
+  if (!hasDatabase) {
+    const user: StoredUser = {
+      id: nextMemId(),
+      name,
+      email,
+      passwordHash: "",
+      role: "customer",
+      firebaseUid: uid,
+    };
+    memUsers.set(email, user);
+    return user;
+  }
+  await connectToDatabase();
+  const doc = await UserModel.create({
+    name,
+    email,
+    passwordHash: "",
+    role: "customer",
+    firebaseUid: uid,
+  });
+  return docToStoredUser(doc.toObject());
 }
 
 export async function createUser(input: {

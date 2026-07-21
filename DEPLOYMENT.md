@@ -39,8 +39,7 @@ both the UI and the API.
 | Payments       | **Razorpay** (India) + **Stripe**    |
 | Email          | **Resend**                           |
 | DNS / TLS      | **Cloudflare**                       |
-| Auth (today)   | Custom JWT (`AUTH_SECRET`)           |
-| Auth (planned) | Firebase Auth — *not wired yet*      |
+| Auth           | **Firebase Auth** when configured, else custom-JWT fallback |
 
 If you have actually decided to move to a Railway/Render topology instead, stop
 here and tell me — that's a different build, not a config tweak.
@@ -59,7 +58,9 @@ table is the summary.
 | --- | --- | --- | --- |
 | `NEXT_PUBLIC_SITE_URL` | public | **yes** | Your live origin, no trailing slash. Used for canonical/OG URLs, sitemap, robots, and **Stripe return URLs**. |
 | `MONGODB_URI` | secret | **yes*** | Atlas connection string (see step 1). *Without it the app serves a read-only in-memory demo catalog and all DB-only features (orders, wholesale) fail.* |
-| `AUTH_SECRET` | secret | **yes** | Signs the session JWT. Generate: `node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"`. |
+| `AUTH_SECRET` | secret | **yes (fallback auth)** | Signs the legacy custom-JWT session. Required unless Firebase Auth is fully configured (see below). Generate: `node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"`. |
+| `NEXT_PUBLIC_FIREBASE_API_KEY` / `_AUTH_DOMAIN` / `_PROJECT_ID` / `_APP_ID` | public | for Firebase auth | Firebase web config (Console → Project settings). |
+| `FIREBASE_CLIENT_EMAIL` / `FIREBASE_PRIVATE_KEY` | secret | for Firebase auth | Admin SDK service account (verifies tokens, mints session cookies). Keep the key's newlines as literal `\n`. |
 | `ADMIN_EMAILS` | config | recommended | Comma-separated emails auto-elevated to admin. |
 | `PLATFORM_COMMISSION_RATE` | config | no (default 10) | Platform commission % on vendor sales. |
 | `NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME` | public | for uploads | Cloudinary cloud name. |
@@ -74,10 +75,13 @@ table is the summary.
 | `NOTIFICATION_FROM_EMAIL` | config | for email | Verified sender, e.g. `TechStore <no-reply@yourdomain>`. |
 | `SELLER_NAME` / `SELLER_GSTIN` / `SELLER_ADDRESS` | config | recommended | Printed on GST invoices; each falls back to a placeholder. |
 
-**Not required for this deploy:** the `NEXT_PUBLIC_FIREBASE_*` / `FIREBASE_*`
-variables. The app authenticates with the custom JWT (`AUTH_SECRET`) today and
-reads none of the Firebase vars — they're reserved for the future Firebase Auth
-migration. Setting them now is harmless but has no effect.
+**Auth is auto-flip:** set **all six** Firebase vars and the app authenticates
+via Firebase (client sign-in → server-verified session cookie); leave any unset
+and it falls back to the custom-JWT path (`AUTH_SECRET`). So you can deploy on the
+fallback first and switch to Firebase later just by adding the vars and
+redeploying — no code change. Enabling Firebase also needs, in the Firebase
+Console: **Authentication → Sign-in method → Email/Password = enabled**, and your
+domain added under **Authentication → Settings → Authorized domains**.
 
 Each gateway/service is **independent**: if Stripe keys are absent the "Pay by
 card" option simply doesn't appear, if Cloudinary is absent uploads fall back to
@@ -181,6 +185,12 @@ address.
 - Payment routes (`/api/orders`, `/api/payments/verify`,
   `/api/payments/stripe/webhook`) set `maxDuration = 30` so a cold start plus a
   slow upstream can't cut off a payment mid-flight.
-- **Firebase Auth is not implemented yet.** Until that migration lands,
-  `AUTH_SECRET` is the auth system — keep it set and stable (rotating it logs
-  everyone out).
+- **Auth is Firebase-or-fallback.** With the six Firebase vars set, sign-in is
+  Firebase (client SDK → httpOnly session cookie verified by the Admin SDK in
+  Node; the Edge middleware only checks cookie presence, and the Node
+  layouts/handlers remain the authoritative admin/vendor/wholesaler gate).
+  Existing users are linked to their Firebase identity **by email** on first
+  sign-in — so the admin account keeps admin (via `ADMIN_EMAILS`) by registering
+  the same email in Firebase. Without the Firebase vars, the legacy
+  `AUTH_SECRET` custom-JWT auth runs instead; keep that secret stable (rotating
+  it logs everyone out).

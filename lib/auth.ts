@@ -4,6 +4,7 @@ import bcrypt from "bcryptjs";
 import { SignJWT, jwtVerify } from "jose";
 import {
   findUserById,
+  linkOrCreateFirebaseUser,
   type PublicUser,
   type StoredUser,
   toPublicUser,
@@ -12,6 +13,20 @@ import { isAdminEmail } from "@/lib/admin";
 import { hasDatabase } from "@/lib/mongodb";
 import { getVendorByOwner, type Vendor } from "@/lib/vendors";
 import { getWholesalerByUser, type WholesalerProfile } from "@/lib/wholesalers";
+import {
+  firebaseAdminConfigured,
+  adminAuth,
+  SESSION_COOKIE_DAYS,
+} from "@/lib/firebaseAdmin";
+
+/**
+ * Which auth system is live. When the Firebase Admin credentials are present the
+ * app authenticates via Firebase (client sign-in → server session cookie);
+ * otherwise it falls back to the legacy custom-JWT + bcrypt flow so dev, tests,
+ * and un-provisioned environments keep working. This is the single switch the
+ * whole auth layer branches on.
+ */
+export const firebaseAuthEnabled = firebaseAdminConfigured;
 
 const COOKIE_NAME = "techstore_session";
 const SESSION_DAYS = 7;
@@ -26,9 +41,10 @@ function getSecret(): Uint8Array {
   if (secret && secret.length >= 16) {
     return new TextEncoder().encode(secret);
   }
-  // In production a real secret is mandatory — a weak/absent one would let anyone
-  // forge admin sessions. Fail fast rather than silently signing insecure tokens.
-  if (process.env.NODE_ENV === "production") {
+  // In production a real secret is mandatory FOR THE LEGACY PATH — a weak/absent
+  // one would let anyone forge admin sessions. When Firebase auth is enabled this
+  // secret is unused (sessions are Firebase-signed), so don't require it then.
+  if (process.env.NODE_ENV === "production" && !firebaseAuthEnabled) {
     throw new Error(
       "AUTH_SECRET is required in production (set a strong value, at least 16 characters)."
     );
@@ -117,6 +133,25 @@ export async function getCurrentUser(): Promise<PublicUser | null> {
   const token = store.get(COOKIE_NAME)?.value;
   if (!token) return null;
 
+  // Firebase path: the cookie is a Firebase session cookie; verify it with the
+  // Admin SDK, then map the Firebase identity to our user record (link-by-email
+  // for legacy accounts). Roles / wholesaler status are re-derived, never trusted.
+  if (firebaseAuthEnabled) {
+    try {
+      const auth = await adminAuth();
+      const decoded = await auth.verifySessionCookie(token);
+      const user = await linkOrCreateFirebaseUser({
+        uid: decoded.uid,
+        email: decoded.email ?? "",
+        name: (decoded.name as string | undefined) ?? decoded.email ?? "User",
+      });
+      return enrichPublicUser(user);
+    } catch {
+      return null; // expired / revoked / invalid
+    }
+  }
+
+  // Legacy path: custom HS256 JWT signed with AUTH_SECRET.
   try {
     const { payload } = await jwtVerify(token, getSecret());
     const id = payload.sub;
@@ -127,6 +162,36 @@ export async function getCurrentUser(): Promise<PublicUser | null> {
   } catch {
     return null; // expired / tampered / invalid
   }
+}
+
+/**
+ * Firebase path: exchange a freshly-minted client ID token for an httpOnly
+ * session cookie (verified + created by the Admin SDK), set it, and return the
+ * enriched app user. Throws if the token is invalid or Firebase isn't enabled.
+ */
+export async function createFirebaseSession(idToken: string): Promise<PublicUser> {
+  if (!firebaseAuthEnabled) {
+    throw new Error("Firebase auth is not enabled.");
+  }
+  const auth = await adminAuth();
+  // Verify first so a bad/forged token fails before we mint anything.
+  const decoded = await auth.verifyIdToken(idToken);
+  const expiresIn = SESSION_COOKIE_DAYS * 24 * 60 * 60 * 1000; // ms
+  const sessionCookie = await auth.createSessionCookie(idToken, { expiresIn });
+  const store = await cookies();
+  store.set(COOKIE_NAME, sessionCookie, {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "lax",
+    path: "/",
+    maxAge: SESSION_COOKIE_DAYS * 24 * 60 * 60,
+  });
+  const user = await linkOrCreateFirebaseUser({
+    uid: decoded.uid,
+    email: decoded.email ?? "",
+    name: (decoded.name as string | undefined) ?? decoded.email ?? "User",
+  });
+  return enrichPublicUser(user);
 }
 
 /** Return the current user only if they are an admin, else null. */
