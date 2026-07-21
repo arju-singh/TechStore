@@ -6,6 +6,32 @@ different from generic "Vercel + Railway + Render" reference diagrams — see
 
 ---
 
+## Project status
+
+**Code-complete — nothing remains to build.** The re-platform features shipped in
+PRs #6–#11 (payment-gateway abstraction, Stripe hosted-Checkout, Cloudinary
+uploads, Vercel deploy config, and **Firebase Auth** as an auto-flip bridge —
+Firebase when its six env vars are set, else the legacy custom-JWT path; existing
+users link **by email** on first Firebase sign-in). PRs #12–#14 added deploy docs
+and de-flaked CI — no new features.
+
+**What's left is the live deploy + verification**, which requires real
+credentials the maintainer provisions (never fabricated):
+
+1. Provision the cloud accounts and set env vars in Vercel — this runbook + the
+   [go-live checklist](docs/go-live-checklist.md) + the
+   [Firebase walkthrough](docs/firebase-setup.md) are the step-by-step.
+2. Deploy on Vercel.
+3. Run the [post-deploy verification](#post-deploy-verification).
+
+Three paths are **not yet verified end-to-end** (they need live credentials):
+**Firebase sign-in**, the **Stripe webhook**, and **Cloudinary signed-download**.
+Fastest unblock: the Atlas URI + the six Firebase vars (Firebase is testable
+locally via `.env` + `npm run dev`, since `localhost` is a Firebase-authorized
+domain by default).
+
+---
+
 ## Architecture
 
 TechStore is a **single Next.js 15 app** (App Router). The `app/api/**` routes
