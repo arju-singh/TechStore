@@ -25,6 +25,9 @@ yarn-error.log*
 .env.local
 .env*.local
 
+# vercel (local project linkage + pulled env — never commit)
+.vercel
+
 # typescript
 *.tsbuildinfo
 

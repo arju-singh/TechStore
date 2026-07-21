@@ -18,6 +18,11 @@ import { checkPincode } from "@/lib/delivery";
 import { validateCoupon } from "@/lib/coupons";
 import { getGateway, toMinorUnits, type GatewayId } from "@/lib/payments";
 
+// Give the checkout path headroom on Vercel: creating an order does several
+// sequential DB writes plus an external gateway call, which can exceed the
+// default serverless timeout under a cold start + slow upstream.
+export const maxDuration = 30;
+
 export async function GET() {
   const user = await getCurrentUser();
   if (!user) {

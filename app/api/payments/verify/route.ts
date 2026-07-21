@@ -3,6 +3,10 @@ import { getCurrentUser } from "@/lib/auth";
 import { getOrderById, markOrderPaid } from "@/lib/orders";
 import { getGateway } from "@/lib/payments";
 
+// Verifying a payment signature and marking the order paid must not be cut off
+// by the default serverless timeout — give it headroom.
+export const maxDuration = 30;
+
 export async function POST(request: Request) {
   const user = await getCurrentUser();
   if (!user) {
